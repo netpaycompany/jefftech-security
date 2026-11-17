@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { ShieldCheck } from "lucide-react";
-
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -46,9 +45,7 @@ export default function UpdatePasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
-        <div className="mb-6 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/15 text-blue-300">
-          <ShieldCheck className="h-5 w-5" />
-        </div>
+        <div className="mb-6"><BrandLogo size={48} /></div>
         <h1 className="text-2xl font-semibold text-white">Choose a new password</h1>
         <p className="mt-2 text-sm text-slate-400">Use at least 12 characters to secure your account.</p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

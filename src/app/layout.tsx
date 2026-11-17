@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Jefftech Password Vault",
   description: "Zero-knowledge password management with premium security and encryption-first architecture.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 async function RequestTimeApplication({ children }: { children: React.ReactNode }) {

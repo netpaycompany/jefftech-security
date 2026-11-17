@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { createClient } from "@/lib/supabase/client";
 
 export function AdminLogin() {
@@ -45,7 +45,7 @@ export function AdminLogin() {
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <div className="w-full max-w-lg rounded-[32px] border border-slate-800 bg-slate-900 p-8">
         <div className="mb-6 flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600/15 text-blue-300"><ShieldCheck className="h-6 w-6" /></span>
+          <BrandLogo size={56} />
           <div><p className="text-[10px] uppercase tracking-[0.28em] text-slate-400">Jefftech Security</p><p className="text-lg font-semibold text-white">ADMIN ACCESS</p></div>
         </div>
         <h1 className="text-2xl font-semibold text-white">Administrator sign-in</h1>

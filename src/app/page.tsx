@@ -19,6 +19,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 
 const features = [
   {
@@ -88,9 +89,7 @@ export default function HomePage() {
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
         <header className="flex items-center justify-between border-b border-white/10 py-5">
           <Link href="/" className="flex items-center gap-3" aria-label="Jefftech Security home">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-blue-300">
-              <Shield className="h-5 w-5" />
-            </span>
+            <BrandLogo size={48} priority />
             <span>
               <span className="block text-[10px] uppercase tracking-[0.28em] text-slate-400">Jefftech</span>
               <span className="block text-sm font-semibold tracking-[0.12em] text-white">SECURITY</span>
@@ -284,9 +283,7 @@ export default function HomePage() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
             <div>
               <Link href="/" className="inline-flex items-center gap-3" aria-label="Jefftech Security home">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
-                  <Shield className="h-5 w-5" />
-                </span>
+                <BrandLogo size={48} />
                 <span>
                   <span className="block text-[10px] uppercase tracking-[0.28em] text-slate-400">Jefftech</span>
                   <span className="block text-sm font-semibold tracking-[0.12em] text-white">SECURITY</span>

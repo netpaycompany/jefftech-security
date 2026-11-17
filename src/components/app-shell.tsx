@@ -19,6 +19,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/brand-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { PhotoAccessPrompt } from "@/components/photos/photo-access-prompt";
 import { VaultLockButton } from "@/components/vault/vault-lock-button";
@@ -67,9 +68,7 @@ export function AppShell({
       <div className="mx-auto flex max-w-[1600px]">
         <aside className="hidden w-72 shrink-0 border-r border-slate-800 bg-slate-950/80 p-6 lg:block">
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/20 text-blue-300">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+            <BrandLogo size={48} />
             <div>
               <p className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Jefftech Security</p>
               <p className="text-lg font-semibold text-white">PASSWORD VAULT</p>

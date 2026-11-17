@@ -2,9 +2,10 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { takeGoogleSignupDraft } from "@/components/auth/google-auth-button";
 import { createClient } from "@/lib/supabase/client";
 import { safeInternalPath } from "@/lib/safe-internal-path";
@@ -111,9 +112,7 @@ export default function GoogleSignupCompletePage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <div className="w-full max-w-md rounded-[30px] border border-slate-800 bg-slate-900 p-8 shadow-2xl shadow-blue-950/30">
-        <div className="mb-6 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/15 text-blue-300">
-          <ShieldCheck className="h-5 w-5" />
-        </div>
+        <div className="mb-6"><BrandLogo size={48} /></div>
         <p className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Jefftech Security</p>
         <h1 className="mt-2 text-3xl font-semibold text-white">Finish setting up your account</h1>
         {isLoading ? (

@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowRight, Copy, KeyRound, ShieldCheck } from "lucide-react";
+import { ArrowRight, Copy, KeyRound } from "lucide-react";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { useVault } from "@/components/vault/vault-provider";
 import {
   ARGON2ID_PARAMETERS,
@@ -757,9 +758,7 @@ export function VaultAccess() {
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <div className="w-full max-w-2xl rounded-[30px] border border-slate-800 bg-slate-900 p-8 shadow-2xl shadow-blue-950/30">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/15 text-blue-300">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
+          <BrandLogo size={48} />
           <div>
             <p className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Jefftech Security</p>
             <p className="text-lg font-semibold text-white">Encrypted vault</p>
