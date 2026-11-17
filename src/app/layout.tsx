@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
-import { Suspense } from "react";
 import { VaultProvider } from "@/components/vault/vault-provider";
 import "./globals.css";
+
+export const instant = false;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,21 +25,16 @@ export const metadata: Metadata = {
   },
 };
 
-async function RequestTimeApplication({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
   await connection();
-  return <VaultProvider>{children}</VaultProvider>;
-}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-slate-950 text-slate-100">
-        <Suspense fallback={<div className="min-h-screen bg-slate-950" aria-busy="true" />}>
-          <RequestTimeApplication>{children}</RequestTimeApplication>
-        </Suspense>
+        <VaultProvider>{children}</VaultProvider>
       </body>
     </html>
   );

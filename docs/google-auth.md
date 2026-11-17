@@ -15,11 +15,12 @@ The login and signup pages use Supabase Auth's Google provider. OAuth returns to
 
    ```text
    http://localhost:3000/auth/callback
-   https://<your-domain>/auth/callback
+   https://jefftechsecurity.vercel.app/auth/callback
    ```
 
    For preview deployments, add only the exact origins and callback paths you use. Avoid broad wildcards where possible.
-4. Confirm email/password signup and Google user creation are enabled in Supabase Auth if both methods should be available.
-5. Test signup and sign-in on localhost and the deployed HTTPS site. A newly created Google account completes signup and then sets up a vault master password; existing accounts continue to their dashboard or requested in-app destination.
+4. In Vercel, make sure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set for the Production environment, then redeploy. These values are public client configuration, not service-role secrets.
+5. Confirm email/password signup and Google user creation are enabled in Supabase Auth if both methods should be available.
+6. Test signup and sign-in on localhost and the deployed HTTPS site. A newly created Google account completes signup and then sets up a vault master password; existing accounts continue to their dashboard or requested in-app destination.
 
 No Supabase database migration is required. Profile details are written through the existing authenticated `profiles` self-update policy. The signup terms checkbox follows the site's current UX; this flow does not persist a legal-consent record.
