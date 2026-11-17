@@ -1,11 +1,13 @@
 import "server-only";
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { connection } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, supabaseUrl } from "@/lib/supabase/env";
 
 export async function requireAdmin() {
+  await connection();
   const authClient = await createClient();
   const { data: { user }, error } = await authClient.auth.getUser();
   if (error || !user) {
