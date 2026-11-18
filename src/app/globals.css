@@ -41,3 +41,7 @@ select {
 ::selection {
   background: rgba(59, 130, 246, 0.35);
 }
+
+.mobile-bottom-nav {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
