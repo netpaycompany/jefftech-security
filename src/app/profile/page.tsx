@@ -1,16 +1,19 @@
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import Link from "next/link";
+import { ChevronRight, KeyRound, Laptop, LogOut, ShieldCheck, UserRound } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { ProfileForm } from "@/components/auth/profile-form";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { createClient } from "@/lib/supabase/server";
 
 export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <AppShell title="Your profile" activePath="/profile">
+        <AppShell title="My Profile" activePath="/profile">
           <p role="status" className="text-sm text-slate-400">Loading your profile...</p>
         </AppShell>
       }
@@ -44,12 +47,63 @@ async function ProfileContent() {
   }
 
   return (
-    <AppShell title="Your profile" activePath="/profile">
-      <section className="max-w-2xl rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
-        <div className="mb-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Account details</p>
-          <h2 className="mt-2 text-xl font-semibold text-white">Personal information</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+    <AppShell title="My Profile" activePath="/profile">
+      <p className="mb-4 text-sm text-slate-300 sm:mb-5 sm:text-base">Manage your account, security, and preferences.</p>
+
+      <section className="mb-4 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-blue-400/35 bg-gradient-to-br from-blue-950 via-slate-950 to-blue-950 p-4 shadow-lg shadow-blue-950/20 sm:mb-5 sm:p-6">
+        <div className="flex min-w-0 items-center gap-4">
+          <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white ring-4 ring-blue-400/15 sm:h-20 sm:w-20">
+            {(profile.full_name || user.email || "U").slice(0, 1).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-bold text-white sm:text-2xl">{profile.full_name || "Your profile"}</h2>
+            <p className="mt-1 break-all text-sm text-slate-200">{user.email}</p>
+            <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${user.email_confirmed_at ? "bg-emerald-500/20 text-emerald-200" : "bg-amber-500/15 text-amber-200"}`}>
+              <ShieldCheck className="h-4 w-4" />
+              {user.email_confirmed_at ? "Email verified" : "Email not verified"}
+            </p>
+          </div>
+        </div>
+        <Link href="#account-information" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300/50 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500/15">
+          <UserRound className="h-4 w-4" />
+          Edit Profile
+        </Link>
+      </section>
+
+      <nav aria-label="Profile and account settings" className="mb-5 space-y-2 sm:mb-6 sm:space-y-3">
+        {[
+          { title: "Account Information", description: "Update your name, phone, address, and country", href: "#account-information", icon: UserRound, color: "text-violet-300 bg-violet-500/20" },
+          { title: "Security Settings", description: "Password, vault encryption, and extension sessions", href: "/settings", icon: ShieldCheck, color: "text-cyan-300 bg-cyan-500/20" },
+          { title: "My Devices", description: "Manage devices and active sessions", href: "/devices", icon: Laptop, color: "text-sky-300 bg-blue-500/20" },
+          { title: "Recovery Options", description: "Review vault recovery and backup guidance", href: "/recovery", icon: KeyRound, color: "text-cyan-300 bg-cyan-500/20" },
+          { title: "Password Alerts", description: "Review weak or reused password findings", href: "/security#password-health", icon: ShieldCheck, color: "text-blue-200 bg-blue-500/20" },
+        ].map(({ title, description, href, icon: Icon, color }) => (
+          <Link key={title} href={href} className="group flex min-h-[72px] items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/65 to-slate-950 px-3 py-3 transition-colors hover:border-blue-400/60 sm:min-h-[76px] sm:gap-4 sm:px-5">
+            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${color}`}><Icon className="h-5 w-5" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-white sm:text-base">{title}</span>
+              <span className="mt-0.5 block text-xs text-slate-300 sm:text-sm">{description}</span>
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        ))}
+        <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/65 to-slate-950 px-3 py-3 sm:min-h-[76px] sm:gap-4 sm:px-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
+            <LogOut className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-white sm:text-base">Sign Out</p>
+            <p className="mt-0.5 text-xs text-slate-300 sm:text-sm">Log out of your Jefftech Security account</p>
+          </div>
+          <SignOutButton />
+        </div>
+      </nav>
+
+      <section id="account-information" className="scroll-mt-5 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/60 to-slate-950 p-4 sm:p-6">
+        <div className="mb-5">
+          <p className="text-xs uppercase tracking-[0.18em] text-blue-200">Account information</p>
+          <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">Personal details</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
             Manage the name, phone number, and address associated with your account. Your email address is managed by your sign-in provider.
           </p>
         </div>
@@ -61,9 +115,6 @@ async function ProfileContent() {
           address={profile.address ?? ""}
           country={profile.country ?? ""}
         />
-        <div className="mt-8 border-t border-slate-800 pt-5 text-xs text-slate-500">
-          User ID: <span className="font-mono">{user.id}</span>
-        </div>
       </section>
     </AppShell>
   );

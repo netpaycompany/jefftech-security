@@ -185,7 +185,7 @@ async function DashboardContent() {
         </Link>
       </section>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 2xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {dashboardMetrics.map(({ label, value, detail, icon: Icon, color }) => (
           <div key={label} className="min-w-0 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/75 to-slate-950 p-3.5 shadow-md shadow-blue-950/20 sm:p-5">
             <div className="flex items-center gap-2.5 sm:gap-3">
@@ -200,7 +200,7 @@ async function DashboardContent() {
         ))}
       </div>
 
-      <div className="mt-5 grid gap-4 xl:mt-8 xl:grid-cols-[1.2fr_0.8fr] xl:gap-6">
+      <div className="mt-5 grid gap-4 xl:mt-8 xl:gap-6">
         <section className="rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/60 to-slate-950 p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -302,7 +302,7 @@ async function DashboardContent() {
         </div>
       </section>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3 sm:mt-6 sm:gap-6">
+      <div className="mt-4 grid gap-4 md:grid-cols-2 sm:mt-6 sm:gap-6">
         <div className="rounded-3xl border border-blue-500/20 bg-slate-900/80 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Session health</p>

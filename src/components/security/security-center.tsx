@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import {
+  ArrowUpRight,
+  Bell,
+  Fingerprint,
+  Laptop,
+  Layers3,
+  LockKeyhole,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useVault } from "@/components/vault/vault-provider";
+import { VAULT_ALGORITHM } from "@/lib/security";
 import { toPasswordVaultItem } from "@/lib/vault";
 
 type BreachResult = Record<string, "safe" | "found">;
@@ -51,6 +63,30 @@ export function SecurityCenter() {
     passwordGroups.set(record.password, records);
   }
   const reused = new Set([...passwordGroups.values()].filter((group) => group.length > 1).flat().map((record) => record.id));
+  const breachMatches = Object.values(breachResults).filter((value) => value === "found").length;
+  const breachChecksComplete = passwords.length > 0 && Object.keys(breachResults).length === passwords.length;
+  const needsAttention = weak.length > 0 || reused.size > 0 || breachMatches > 0;
+  const securityStatus = !session
+    ? "Vault locked"
+    : passwords.length === 0
+      ? "Ready to monitor"
+      : needsAttention ? "Needs attention" : "No weaknesses found";
+  const securitySummary = needsAttention
+    ? "Review the password-health findings below."
+    : passwords.length === 0
+      ? "Your encrypted vault is ready for password-health checks."
+      : breachChecksComplete
+        ? "No weak, reused, or known-breached passwords were found."
+        : Object.keys(breachResults).length === 0
+          ? "No weak or reused passwords; the optional breach check has not run."
+          : "No weak or reused passwords; the breach check is incomplete.";
+  const breachCheckValue = passwords.length === 0
+    ? "Not checked"
+    : Object.keys(breachResults).length === 0
+      ? "Not checked"
+      : breachChecksComplete
+        ? String(breachMatches)
+        : `${Object.keys(breachResults).length}/${passwords.length} checked`;
 
   const runBreachChecks = async () => {
     setError("");
@@ -79,44 +115,109 @@ export function SecurityCenter() {
   return (
     <AppShell title="Security Center" activePath="/security">
       {!session ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+        <section className="rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/70 to-slate-950 p-5 sm:p-6">
+          <div className="flex items-center gap-3">
+            <ShieldAlert className="h-8 w-8 text-amber-300" />
+            <div>
+              <p className="text-sm font-semibold text-white">Vault is locked</p>
+              <p className="text-xs text-slate-300">Unlock to run private password-health checks.</p>
+            </div>
+          </div>
           <h2 className="text-xl font-semibold text-white">Unlock to analyze your vault</h2>
           <p className="mt-2 text-sm text-slate-400">Weak and reused password analysis runs locally against decrypted records.</p>
           <Link href="/master-password" className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm text-white">Unlock vault</Link>
         </section>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-2">
-          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Local password analysis</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">{passwords.length} saved passwords</h2>
-            <dl className="mt-5 space-y-3">
-              <StatusRow label="Weak passwords" value={String(weak.length)} warning={weak.length > 0} />
-              <StatusRow label="Reused passwords" value={String(reused.size)} warning={reused.size > 0} />
-              <StatusRow label="Known breach matches" value={String(Object.values(breachResults).filter((value) => value === "found").length)} warning={Object.values(breachResults).some((value) => value === "found")} />
-            </dl>
-            <ul className="mt-5 space-y-2 text-sm">
-              {passwords.filter((record) => weak.includes(record) || reused.has(record.id) || breachResults[record.id] === "found").map((record) => (
-                <li key={record.id} className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-amber-100">
-                  {record.site}: {[
-                    weak.includes(record) ? "weak" : "",
-                    reused.has(record.id) ? "reused" : "",
-                    breachResults[record.id] === "found" ? "found in breach corpus" : "",
-                  ].filter(Boolean).join(" · ")}
-                </li>
-              ))}
-            </ul>
+        <div>
+          <p className="mb-4 text-sm text-slate-300 sm:mb-5 sm:text-base">Monitor your vault, protect your data, and stay secure.</p>
+
+          <section className="mb-4 flex min-h-32 items-center justify-between gap-4 overflow-hidden rounded-3xl border border-cyan-400/35 bg-gradient-to-r from-blue-950 via-slate-950 to-blue-950 p-4 sm:mb-5 sm:p-6">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+              <ShieldCheck className={`h-12 w-12 shrink-0 sm:h-16 sm:w-16 ${needsAttention ? "text-amber-300" : "text-emerald-400"}`} />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white sm:text-lg">Security Status</p>
+                <h2 className={`mt-1 text-2xl font-bold sm:text-3xl ${needsAttention ? "text-amber-300" : "text-emerald-300"}`}>{securityStatus}</h2>
+                <p className="mt-1 text-xs text-slate-300 sm:text-sm">{securitySummary} Auto-locks after 15 minutes of inactivity.</p>
+              </div>
+            </div>
+            <span aria-hidden="true" className="hidden h-24 w-24 shrink-0 items-center justify-center rounded-full border border-blue-400/40 bg-blue-500/10 text-blue-300 sm:flex">
+              <LockKeyhole className="h-12 w-12" />
+            </span>
           </section>
-          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Privacy-preserving breach check</p>
-            <p className="mt-3 text-sm leading-6 text-slate-300">
-              This optional check sends only the first five characters of each password&apos;s SHA-1 hash to Have I Been Pwned. The password and remaining hash suffix stay on this device. The service will still see your IP address and requested prefixes.
-            </p>
-            <button type="button" onClick={() => void runBreachChecks()} disabled={isChecking || passwords.length === 0} className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50">
-              {isChecking ? "Checking..." : "Check breach status"}
-            </button>
-            {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
-            <p className="mt-5 text-xs leading-5 text-slate-500">Security recommendations: use unique, long passwords; keep a copy of the recovery key offline; enable multi-factor authentication on your account. Device/session management and MFA setup are not yet integrated here.</p>
-          </section>
+
+          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: "Encryption", value: VAULT_ALGORITHM, icon: LockKeyhole, color: "text-cyan-300" },
+              { label: "Weak passwords", value: String(weak.length), icon: ShieldAlert, color: weak.length ? "text-amber-300" : "text-emerald-300" },
+              { label: "Reused passwords", value: String(reused.size), icon: Fingerprint, color: reused.size ? "text-amber-300" : "text-emerald-300" },
+              { label: "Breach matches", value: breachCheckValue, icon: Layers3, color: breachMatches ? "text-amber-300" : "text-blue-200" },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-950/80 to-slate-950 p-3 text-center sm:min-h-32">
+                <Icon className={`mb-2 h-7 w-7 ${color}`} />
+                <p className="text-xs font-semibold text-white sm:text-sm">{label}</p>
+                <p className={`mt-1 text-xs font-medium ${color}`}>{value}</p>
+              </div>
+            ))}
+          </div>
+
+          <nav aria-label="Security tools" className="mb-5 space-y-2">
+            {[
+              { title: "Password Alerts", description: "Review weak or reused password findings", href: "#password-health", icon: Bell, color: "text-sky-300 bg-blue-500/20" },
+              { title: "Devices & Sessions", description: "Manage devices currently signed in", href: "/devices", icon: Laptop, color: "text-cyan-300 bg-cyan-500/20" },
+              { title: "Password Health", description: "Check for weak or reused passwords", href: "#password-health", icon: Shield, color: "text-sky-300 bg-blue-500/20" },
+              { title: "Breach Check", description: "Optional private check against known breaches", href: "#breach-check", icon: Fingerprint, color: "text-teal-300 bg-teal-500/20" },
+              { title: "Security Settings", description: "Manage vault encryption and extension sessions", href: "/settings", icon: LockKeyhole, color: "text-violet-300 bg-violet-500/20" },
+            ].map(({ title, description, href, icon: Icon, color }) => (
+              <Link key={title} href={href} className="group flex min-h-[72px] items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/65 to-slate-950 px-3 py-3 transition-colors hover:border-blue-400/60 sm:min-h-[76px] sm:gap-4 sm:px-5">
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${color}`}><Icon className="h-5 w-5" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-white sm:text-base">{title}</span>
+                  <span className="mt-0.5 block text-xs text-slate-300 sm:text-sm">{description}</span>
+                </span>
+                <ArrowUpRight className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            ))}
+          </nav>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <section id="password-health" className="scroll-mt-5 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/60 to-slate-950 p-4 sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-blue-200">Local password analysis</p>
+                  <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">{passwords.length} saved passwords</h2>
+                </div>
+                <ShieldAlert className="h-5 w-5 text-amber-300" />
+              </div>
+              <dl className="space-y-2">
+                <StatusRow label="Weak passwords" value={String(weak.length)} warning={weak.length > 0} />
+                <StatusRow label="Reused passwords" value={String(reused.size)} warning={reused.size > 0} />
+                <StatusRow label="Known breach matches" value={String(breachMatches)} warning={breachMatches > 0} />
+              </dl>
+              <ul className="mt-4 space-y-2 text-sm">
+                {passwords.filter((record) => weak.includes(record) || reused.has(record.id) || breachResults[record.id] === "found").map((record) => (
+                  <li key={record.id} className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-amber-100">
+                    {record.site}: {[
+                      weak.includes(record) ? "weak" : "",
+                      reused.has(record.id) ? "reused" : "",
+                      breachResults[record.id] === "found" ? "found in breach corpus" : "",
+                    ].filter(Boolean).join(" · ")}
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section id="breach-check" className="scroll-mt-5 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/60 to-slate-950 p-4 sm:p-6">
+              <p className="text-xs uppercase tracking-[0.18em] text-blue-200">Privacy-preserving breach check</p>
+              <p className="mt-3 text-sm leading-6 text-slate-300">
+                This optional check sends only the first five characters of each password&apos;s SHA-1 hash to Have I Been Pwned. The password and remaining hash suffix stay on this device. The service will still see your IP address and requested prefixes.
+              </p>
+              <button type="button" onClick={() => void runBreachChecks()} disabled={isChecking || passwords.length === 0} className="mt-4 min-h-11 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50">
+                {isChecking ? "Checking..." : "Check breach status"}
+              </button>
+              {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
+              <p className="mt-4 text-xs leading-5 text-slate-400">Use unique, long passwords and keep a copy of your recovery key offline. This check is optional and runs only when you start it.</p>
+            </section>
+          </div>
         </div>
       )}
     </AppShell>

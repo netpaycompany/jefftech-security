@@ -79,12 +79,13 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const visibleNavItems = adminMode ? adminNavItems : navItems;
+  const dashboardMode = !adminMode && activePath === "/dashboard";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {!adminMode && <PhotoAccessPrompt />}
       <div className="mx-auto flex max-w-[1600px]">
-        <aside className="hidden w-72 shrink-0 border-r border-slate-800 bg-slate-950/80 p-6 lg:block">
+        <aside className={cn("hidden w-72 shrink-0 border-r border-slate-800 bg-slate-950/80 p-6 lg:block", dashboardMode && "lg:hidden")}>
           <div className="mb-8 flex items-center gap-3">
             <BrandLogo size={48} />
             <div>
@@ -122,9 +123,9 @@ export function AppShell({
           </div>
         </aside>
 
-        <main className="flex-1">
+        <main className={cn("flex-1", dashboardMode && "mx-auto w-full max-w-5xl")}>
           <header className="border-b border-slate-800 bg-slate-950/85 px-4 py-4 backdrop-blur-sm sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-3 lg:hidden">
+            <div className={cn("flex items-center justify-between gap-3", !dashboardMode && "lg:hidden")}>
               <details className="relative">
                 <summary
                   aria-label="Open navigation menu"
@@ -200,8 +201,12 @@ export function AppShell({
       </div>
       {!adminMode && (
         <nav
-          aria-label="Main mobile navigation"
-          className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-end border-t border-blue-900/70 bg-slate-950/95 px-2 pt-2 shadow-[0_-12px_40px_rgba(2,8,23,0.65)] backdrop-blur-xl lg:hidden"
+          aria-label="Main navigation"
+          className={cn(
+            "mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-end border-t border-blue-900/70 bg-slate-950/95 px-2 pt-2 shadow-[0_-12px_40px_rgba(2,8,23,0.65)] backdrop-blur-xl",
+            !dashboardMode && "lg:hidden",
+            dashboardMode && "lg:bottom-5 lg:left-1/2 lg:right-auto lg:w-[min(48rem,calc(100vw-2rem))] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:px-5 lg:pt-2",
+          )}
         >
           {mobileNavItems.slice(0, 2).map(({ name, href, icon: Icon, isActive }) => {
             const active = isActive(activePath);
@@ -212,6 +217,7 @@ export function AppShell({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-medium",
+                  dashboardMode && "lg:min-h-16 lg:text-xs",
                   active ? "text-cyan-300" : "text-slate-400",
                 )}
               >
@@ -224,7 +230,7 @@ export function AppShell({
           <details className="relative flex min-h-14 items-center justify-center">
             <summary
               aria-label="Add a vault item"
-              className="flex h-14 w-14 -translate-y-3 cursor-pointer list-none items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 text-white shadow-lg shadow-blue-600/30 [&::-webkit-details-marker]:hidden"
+              className="flex h-14 w-14 -translate-y-3 cursor-pointer list-none items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 text-white shadow-lg shadow-blue-600/30 [&::-webkit-details-marker]:hidden lg:h-16 lg:w-16"
             >
               <Plus className="h-8 w-8" />
             </summary>
@@ -252,6 +258,7 @@ export function AppShell({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-medium",
+                  dashboardMode && "lg:min-h-16 lg:text-xs",
                   active ? "text-cyan-300" : "text-slate-400",
                 )}
               >
