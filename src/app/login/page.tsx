@@ -33,6 +33,8 @@ export default function LoginPage() {
       if (params.get("error") === "oauth" && active) {
         discardGoogleSignupDraft();
         setError("Google sign-in was not completed. Please try again.");
+      } else if (params.get("error") === "security_check" && active) {
+        setError("We could not verify your sign-in security status. Sign in again and retry.");
       }
     }, 0);
     return () => {

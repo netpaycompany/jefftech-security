@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { ProfileSectionPage } from "@/components/profile/profile-section-page";
 import { useVault } from "@/components/vault/vault-provider";
 import { VAULT_ALGORITHM } from "@/lib/security";
 import { toPasswordVaultItem } from "@/lib/vault";
@@ -46,7 +47,7 @@ async function checkPasswordBreach(password: string, signal: AbortSignal) {
   return ranges.split(/\r?\n/).some((line) => line.split(":")[0]?.toUpperCase() === suffix);
 }
 
-export function SecurityCenter() {
+export function SecurityCenter({ profileMode = false }: { profileMode?: boolean }) {
   const { session } = useVault();
   const [breachResults, setBreachResults] = useState<BreachResult>({});
   const [isChecking, setIsChecking] = useState(false);
@@ -112,8 +113,8 @@ export function SecurityCenter() {
     }
   };
 
-  return (
-    <AppShell title="Security Center" activePath="/security">
+  const content = (
+    <>
       {!session ? (
         <section className="rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/70 to-slate-950 p-5 sm:p-6">
           <div className="flex items-center gap-3">
@@ -163,10 +164,10 @@ export function SecurityCenter() {
           <nav aria-label="Security tools" className="mb-5 space-y-2">
             {[
               { title: "Password Alerts", description: "Review weak or reused password findings", href: "#password-health", icon: Bell, color: "text-sky-300 bg-blue-500/20" },
-              { title: "Devices & Sessions", description: "Manage devices currently signed in", href: "/devices", icon: Laptop, color: "text-cyan-300 bg-cyan-500/20" },
+              { title: "Devices & Sessions", description: "Manage devices currently signed in", href: profileMode ? "/profile/my-devices" : "/devices", icon: Laptop, color: "text-cyan-300 bg-cyan-500/20" },
               { title: "Password Health", description: "Check for weak or reused passwords", href: "#password-health", icon: Shield, color: "text-sky-300 bg-blue-500/20" },
               { title: "Breach Check", description: "Optional private check against known breaches", href: "#breach-check", icon: Fingerprint, color: "text-teal-300 bg-teal-500/20" },
-              { title: "Security Settings", description: "Manage vault encryption and extension sessions", href: "/settings", icon: LockKeyhole, color: "text-violet-300 bg-violet-500/20" },
+              { title: "Security Settings", description: "Manage vault encryption and extension sessions", href: profileMode ? "/profile/security-settings" : "/settings", icon: LockKeyhole, color: "text-violet-300 bg-violet-500/20" },
             ].map(({ title, description, href, icon: Icon, color }) => (
               <Link key={title} href={href} className="group flex min-h-[72px] items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/65 to-slate-950 px-3 py-3 transition-colors hover:border-blue-400/60 sm:min-h-[76px] sm:gap-4 sm:px-5">
                 <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${color}`}><Icon className="h-5 w-5" /></span>
@@ -220,7 +221,13 @@ export function SecurityCenter() {
           </div>
         </div>
       )}
-    </AppShell>
+    </>
+  );
+
+  return profileMode ? (
+    <ProfileSectionPage title="Password Alerts" activeHref="/profile/password-alerts">{content}</ProfileSectionPage>
+  ) : (
+    <AppShell title="Security Center" activePath="/security">{content}</AppShell>
   );
 }
 

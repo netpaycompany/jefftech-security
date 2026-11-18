@@ -2,12 +2,28 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import Link from "next/link";
-import { ChevronRight, KeyRound, Laptop, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronRight, LogOut, ShieldCheck, UserRound } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
-import { ProfileForm } from "@/components/auth/profile-form";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { profileSections } from "@/components/profile/profile-section-page";
 import { createClient } from "@/lib/supabase/server";
+
+const sectionDescriptions: Record<string, string> = {
+  "Account Information": "Update your name, phone, address, and country",
+  "Security Settings": "Manage account password, vault lock, and extensions",
+  "My Devices": "Manage devices, synchronization, and backups",
+  "Recovery Options": "Review recovery key guidance and vault recovery",
+  "Password Alerts": "Check for weak, reused, or breached passwords",
+};
+
+const sectionColors: Record<string, string> = {
+  "Account Information": "text-violet-300 bg-violet-500/20",
+  "Security Settings": "text-cyan-300 bg-cyan-500/20",
+  "My Devices": "text-sky-300 bg-blue-500/20",
+  "Recovery Options": "text-cyan-300 bg-cyan-500/20",
+  "Password Alerts": "text-blue-200 bg-blue-500/20",
+};
 
 export default function ProfilePage() {
   return (
@@ -38,7 +54,7 @@ async function ProfileContent() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("full_name,phone_number,address,country")
+    .select("full_name")
     .eq("id", user.id)
     .single();
 
@@ -64,29 +80,25 @@ async function ProfileContent() {
             </p>
           </div>
         </div>
-        <Link href="#account-information" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300/50 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500/15">
+        <Link href="/profile/account-information" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300/50 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500/15">
           <UserRound className="h-4 w-4" />
           Edit Profile
         </Link>
       </section>
 
       <nav aria-label="Profile and account settings" className="mb-5 space-y-2 sm:mb-6 sm:space-y-3">
-        {[
-          { title: "Account Information", description: "Update your name, phone, address, and country", href: "#account-information", icon: UserRound, color: "text-violet-300 bg-violet-500/20" },
-          { title: "Security Settings", description: "Password, vault encryption, and extension sessions", href: "/settings", icon: ShieldCheck, color: "text-cyan-300 bg-cyan-500/20" },
-          { title: "My Devices", description: "Manage devices and active sessions", href: "/devices", icon: Laptop, color: "text-sky-300 bg-blue-500/20" },
-          { title: "Recovery Options", description: "Review vault recovery and backup guidance", href: "/recovery", icon: KeyRound, color: "text-cyan-300 bg-cyan-500/20" },
-          { title: "Password Alerts", description: "Review weak or reused password findings", href: "/security#password-health", icon: ShieldCheck, color: "text-blue-200 bg-blue-500/20" },
-        ].map(({ title, description, href, icon: Icon, color }) => (
-          <Link key={title} href={href} className="group flex min-h-[72px] items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/65 to-slate-950 px-3 py-3 transition-colors hover:border-blue-400/60 sm:min-h-[76px] sm:gap-4 sm:px-5">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${color}`}><Icon className="h-5 w-5" /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-white sm:text-base">{title}</span>
-              <span className="mt-0.5 block text-xs text-slate-300 sm:text-sm">{description}</span>
-            </span>
-            <ChevronRight className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        ))}
+        {profileSections.map(({ title, href, icon: Icon }) => {
+          return (
+            <Link key={title} href={href} className="group flex min-h-[72px] items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/65 to-slate-950 px-3 py-3 transition-colors hover:border-blue-400/60 sm:min-h-[76px] sm:gap-4 sm:px-5">
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${sectionColors[title]}`}><Icon className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-white sm:text-base">{title}</span>
+                <span className="mt-0.5 block text-xs text-slate-300 sm:text-sm">{sectionDescriptions[title]}</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          );
+        })}
         <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/65 to-slate-950 px-3 py-3 sm:min-h-[76px] sm:gap-4 sm:px-5">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
             <LogOut className="h-5 w-5" />
@@ -99,23 +111,6 @@ async function ProfileContent() {
         </div>
       </nav>
 
-      <section id="account-information" className="scroll-mt-5 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/60 to-slate-950 p-4 sm:p-6">
-        <div className="mb-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-blue-200">Account information</p>
-          <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">Personal details</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            Manage the name, phone number, and address associated with your account. Your email address is managed by your sign-in provider.
-          </p>
-        </div>
-        <ProfileForm
-          userId={user.id}
-          email={user.email ?? ""}
-          fullName={profile.full_name ?? ""}
-          phoneNumber={profile.phone_number ?? ""}
-          address={profile.address ?? ""}
-          country={profile.country ?? ""}
-        />
-      </section>
     </AppShell>
   );
 }

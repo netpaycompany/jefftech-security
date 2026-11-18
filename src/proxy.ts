@@ -79,12 +79,27 @@ export async function proxy(request: NextRequest) {
 
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims) {
-    loginUrl.searchParams.set("next", pathname);
+    if (pathname !== "/mfa") loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return secure(NextResponse.redirect(loginUrl));
   }
 
   if (pathname.startsWith("/admin") && data.claims.app_metadata?.role !== "admin") {
     return secure(NextResponse.redirect(new URL("/admin/login", request.url)));
+  }
+
+  if (pathname !== "/mfa") {
+    const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assuranceError) {
+      return secure(NextResponse.redirect(new URL("/login?error=security_check", request.url)));
+    }
+    if (assurance.nextLevel === "aal2" && assurance.currentLevel !== "aal2") {
+      if (pathname.startsWith("/api/")) {
+        return secure(NextResponse.json({ error: "Complete two-factor verification before continuing." }, { status: 403 }));
+      }
+      const mfaUrl = new URL("/mfa", request.url);
+      mfaUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+      return secure(NextResponse.redirect(mfaUrl));
+    }
   }
 
   return response;

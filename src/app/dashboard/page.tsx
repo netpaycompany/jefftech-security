@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { DashboardVaultConsent } from "@/components/vault/dashboard-vault-consent";
 import { createClient } from "@/lib/supabase/server";
 
 type ActivityRow = {
@@ -55,8 +56,11 @@ const securityEventLabels: Record<string, string> = {
   device_registered: "A device was registered",
   device_verified: "A device was verified",
   device_revoked: "A device was revoked",
+  mfa_enabled: "Two-factor authentication was enabled",
+  mfa_disabled: "Two-factor authentication was disabled",
   vault_item_conflict: "A vault item conflict was detected",
   encrypted_backup_created: "An encrypted backup was created",
+  extension_revoked: "A browser extension was disconnected",
 };
 
 export default function DashboardPage() {
@@ -165,6 +169,7 @@ async function DashboardContent() {
 
   return (
     <AppShell title="Overview" activePath="/dashboard">
+      {!vault && <DashboardVaultConsent />}
       <section className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/80 via-slate-900 to-slate-950 p-4 shadow-lg shadow-blue-950/20 sm:mb-6 sm:p-6">
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
           <div aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600/80 text-xl font-semibold text-white ring-4 ring-blue-500/10 sm:h-14 sm:w-14">

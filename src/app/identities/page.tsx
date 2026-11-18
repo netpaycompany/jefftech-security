@@ -2,6 +2,12 @@ import { VaultCategoryManager, type VaultFieldDefinition } from "@/components/va
 
 const fields: VaultFieldDefinition[] = [
   { name: "fullName", label: "Full name", required: true },
+  { name: "recordType", label: "Identity type", type: "select", options: [
+    { value: "personal", label: "Personal" },
+    { value: "address", label: "Address" },
+    { value: "identification", label: "Identification" },
+    { value: "other", label: "Other" },
+  ] },
   { name: "email", label: "Email", type: "email" },
   { name: "phone", label: "Phone" },
   { name: "address", label: "Address", multiline: true, sensitive: true },
@@ -19,6 +25,12 @@ export default function IdentitiesPage() {
       activePath="/identities"
       description="Store personal and passport information as encrypted vault records."
       fields={fields}
+      facet={{ field: "recordType", options: [
+        { value: "personal", label: "Personal" },
+        { value: "address", label: "Address" },
+        { value: "identification", label: "ID" },
+        { value: "other", label: "Other" },
+      ] }}
     />
   );
 }

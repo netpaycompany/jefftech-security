@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { useVault } from "@/components/vault/vault-provider";
@@ -19,9 +20,14 @@ function PasswordDetailContent() {
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
           <h2 className="text-xl font-semibold text-white">Vault is locked</h2>
           <p className="mt-2 text-sm text-slate-400">Unlock the vault before viewing this credential.</p>
-          <Link href="/master-password" className="mt-5 inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white">
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/passwords" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-200">
+              <ArrowLeft className="h-4 w-4" /> Back to Passwords
+            </Link>
+            <Link href="/master-password" className="inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white">
             Unlock vault
-          </Link>
+            </Link>
+          </div>
         </div>
       </AppShell>
     );
@@ -34,8 +40,8 @@ function PasswordDetailContent() {
       <AppShell title="Password details" activePath="/passwords">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
           <h2 className="text-xl font-semibold text-white">Credential not found</h2>
-          <Link href="/passwords" className="mt-5 inline-flex rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-200">
-            Back to passwords
+          <Link href="/passwords" className="mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-200">
+            <ArrowLeft className="h-4 w-4" /> Back to Passwords
           </Link>
         </div>
       </AppShell>
@@ -78,8 +84,8 @@ function PasswordDetailContent() {
             <h2 className="mt-2 text-3xl font-semibold text-white">{record.site}</h2>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/passwords" className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-600">
-              Back to vault
+            <Link href="/passwords" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-slate-600">
+              <ArrowLeft className="h-4 w-4" /> Back to Passwords
             </Link>
             <button type="button" onClick={() => void copyPassword()} className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500">
               Copy password

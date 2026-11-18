@@ -12,15 +12,15 @@ export default function SettingsPage() {
           <div className="mt-5 space-y-4 text-sm text-slate-300">
             <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
               <span>Two-factor authentication</span>
-              <span className="text-emerald-300">Enabled</span>
+              <Link href="/profile/security-settings" className="text-blue-300 hover:text-blue-200">Manage</Link>
             </div>
             <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
               <span>Master password recovery</span>
-              <span className="text-blue-300">User-held recovery key</span>
+              <Link href="/profile/recovery-options" className="text-blue-300 hover:text-blue-200">Recovery options</Link>
             </div>
             <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-              <span>New device notifications</span>
-              <span className="text-blue-300">On</span>
+              <span>Security notifications</span>
+              <span className="text-emerald-300">In-app bell</span>
             </div>
           </div>
         </div>
@@ -34,9 +34,9 @@ export default function SettingsPage() {
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
               Browser extension lock: automatic after inactivity
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-              Active sessions: 2 trusted devices
-            </div>
+            <Link href="/profile/my-devices" className="block rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-blue-200 hover:border-blue-500/40">
+              Review and remove registered devices
+            </Link>
           </div>
 
           <ExtensionSessions />

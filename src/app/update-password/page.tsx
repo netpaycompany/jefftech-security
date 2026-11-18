@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -45,6 +47,10 @@ export default function UpdatePasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
+        <Link href="/profile/security-settings" className="mb-5 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Security Settings
+        </Link>
         <div className="mb-6"><BrandLogo size={48} /></div>
         <h1 className="text-2xl font-semibold text-white">Choose a new password</h1>
         <p className="mt-2 text-sm text-slate-400">Use at least 12 characters to secure your account.</p>

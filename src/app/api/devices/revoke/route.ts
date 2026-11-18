@@ -1,7 +1,4 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-
 import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured, supabaseUrl } from "@/lib/supabase/env";
 
 export async function POST(request: Request) {
   if (request.headers.get("origin") !== new URL(request.url).origin) {
@@ -12,16 +9,9 @@ export async function POST(request: Request) {
   }
 
   const authClient = await createClient();
-  const [{ data: { user }, error: userError }, { data: { session }, error: sessionError }] = await Promise.all([
-    authClient.auth.getUser(),
-    authClient.auth.getSession(),
-  ]);
-  if (userError || sessionError || !user || !session) {
+  const { data: { user }, error: userError } = await authClient.auth.getUser();
+  if (userError || !user) {
     return Response.json({ error: "Authentication required." }, { status: 401 });
-  }
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!isSupabaseConfigured() || !serviceRoleKey) {
-    return Response.json({ error: "Server-side device revocation is not configured." }, { status: 503 });
   }
 
   let body: unknown;
@@ -46,18 +36,5 @@ export async function POST(request: Request) {
     p_event_type: "device_revoked",
     p_severity: "warning",
   });
-
-  const adminClient = createSupabaseClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-  });
-  const { error: signOutError } = await adminClient.auth.admin.signOut(session.access_token, "global");
-  if (signOutError) {
-    return Response.json({
-      revoked: true,
-      signedOutAllDevices: false,
-      auditLogged: !auditError,
-      error: "The device registration was revoked, but all account sessions could not be invalidated. Sign out from active devices and retry.",
-    }, { status: 503 });
-  }
-  return Response.json({ revoked: true, signedOutAllDevices: true, auditLogged: !auditError }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ revoked: true, auditLogged: !auditError }, { headers: { "Cache-Control": "no-store" } });
 }

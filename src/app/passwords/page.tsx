@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
+import { ArrowLeft, ChevronRight, KeyRound, Search, ShieldAlert, Star } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { useVault } from "@/components/vault/vault-provider";
@@ -38,7 +39,8 @@ function UnlockedPasswords() {
   const [folderFilter, setFolderFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"updated" | "name" | "created">("updated");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [quickFilter, setQuickFilter] = useState<"all" | "favorites" | "recent" | "weak" | "reused">("all");
+  const [recentCutoff, setRecentCutoff] = useState("");
   const [revealedPasswords, setRevealedPasswords] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState("");
   const allRecords = session?.records ?? [];
@@ -47,16 +49,31 @@ function UnlockedPasswords() {
     .filter((record) => record !== null);
   const folders = useMemo(() => [...new Set(records.map((record) => record.folder))].sort(), [records]);
   const tags = useMemo(() => [...new Set(records.flatMap((record) => record.tags))].sort(), [records]);
+  const reusedPasswordIds = useMemo(() => {
+    const recordsByPassword = new Map<string, string[]>();
+    for (const record of records) {
+      const ids = recordsByPassword.get(record.password) ?? [];
+      ids.push(record.id);
+      recordsByPassword.set(record.password, ids);
+    }
+    return new Set([...recordsByPassword.values()].filter((ids) => ids.length > 1).flat());
+  }, [records]);
+  const recentCount = recentCutoff
+    ? records.filter((record) => record.updated >= recentCutoff).length
+    : null;
   const filteredRecords = useMemo(() => records
     .filter((record) => folderFilter === "all" || record.folder === folderFilter)
     .filter((record) => tagFilter === "all" || record.tags.includes(tagFilter))
-    .filter((record) => !favoritesOnly || record.favorite)
+    .filter((record) => quickFilter !== "favorites" || record.favorite)
+    .filter((record) => quickFilter !== "recent" || Boolean(recentCutoff) && record.updated >= recentCutoff)
+    .filter((record) => quickFilter !== "weak" || record.strength === "Weak")
+    .filter((record) => quickFilter !== "reused" || reusedPasswordIds.has(record.id))
     .filter((record) => `${record.site} ${record.username} ${record.email} ${record.url} ${record.note} ${record.folder} ${record.tags.join(" ")}`
       .toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
     .sort((left, right) => sortBy === "name"
       ? left.site.localeCompare(right.site)
       : String(right[sortBy]).localeCompare(String(left[sortBy]))),
-  [records, folderFilter, tagFilter, favoritesOnly, query, sortBy]);
+  [records, folderFilter, tagFilter, quickFilter, recentCutoff, reusedPasswordIds, query, sortBy]);
 
   if (!session) {
     return null;
@@ -215,129 +232,121 @@ function UnlockedPasswords() {
 
   return (
     <AppShell title="Passwords" activePath="/passwords">
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Client-encrypted vault</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">Saved credentials</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Credentials are encrypted in your browser before they are sent to Supabase.
-            </p>
+      <Link href="/vault" className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-blue-500/30 px-3 py-2 text-sm font-medium text-blue-100 hover:bg-blue-500/10">
+        <ArrowLeft className="h-4 w-4" />
+        Back to Vault Items
+      </Link>
+      <section className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-950/70 to-slate-950 p-4 sm:mb-5 sm:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-300"><KeyRound className="h-7 w-7" /></span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-white sm:text-2xl">Passwords</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-300 sm:text-sm">Credentials are encrypted in your browser before they are sent to Supabase.</p>
           </div>
-          <button
-            type="button"
-            onClick={openNewForm}
-            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-500"
-          >
-            Add secret
-          </button>
         </div>
+        <button type="button" onClick={openNewForm} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-cyan-400 hover:to-blue-500">
+          + Add Password
+        </button>
+      </section>
 
-        {error && <p role="alert" className="mb-4 rounded-xl border border-red-500/25 bg-red-500/5 p-3 text-sm text-red-200">{error}</p>}
-        {notice && <p role="status" className="mb-4 rounded-xl border border-blue-500/25 bg-blue-500/5 p-3 text-sm text-blue-200">{notice}</p>}
-        <div className="mb-5 grid gap-3 md:grid-cols-[minmax(12rem,1fr)_auto_auto_auto]">
-          <label className="sr-only" htmlFor="password-search">Search credentials</label>
-          <input id="password-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search credentials (local only)" className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white" />
-          <select aria-label="Filter by folder" value={folderFilter} onChange={(event) => setFolderFilter(event.target.value)} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white">
-            <option value="all">All folders</option>
-            {folders.map((folder) => <option key={folder} value={folder}>{folder}</option>)}
-          </select>
-          <select aria-label="Filter by tag" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white">
-            <option value="all">All tags</option>
-            {tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
-          </select>
-          <select aria-label="Sort credentials" value={sortBy} onChange={(event) => setSortBy(event.target.value as "updated" | "name" | "created")} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white">
-            <option value="updated">Recently updated</option>
-            <option value="created">Recently created</option>
-            <option value="name">Name</option>
-          </select>
-          <label className="flex items-center gap-2 text-sm text-slate-300 md:col-span-4">
-            <input type="checkbox" checked={favoritesOnly} onChange={(event) => setFavoritesOnly(event.target.checked)} className="accent-blue-500" />
-            Favorites only
+      {error && <p role="alert" className="mb-4 rounded-xl border border-red-500/25 bg-red-500/5 p-3 text-sm text-red-200">{error}</p>}
+      {notice && <p role="status" className="mb-4 rounded-xl border border-blue-500/25 bg-blue-500/5 p-3 text-sm text-blue-200">{notice}</p>}
+      <section aria-label="Search and filter passwords" className="mb-4 space-y-3 sm:mb-5">
+        <div className="flex gap-2">
+          <label className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-blue-400/40 bg-gradient-to-r from-blue-950/70 to-slate-950 px-3.5 py-3 focus-within:border-blue-300">
+            <Search className="h-5 w-5 shrink-0 text-blue-200" />
+            <span className="sr-only">Search credentials</span>
+            <input id="password-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search passwords..." className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-300" />
           </label>
+          <details className="relative">
+            <summary aria-label="More password filters" className="flex h-12 w-12 cursor-pointer list-none items-center justify-center rounded-2xl border border-blue-400/40 bg-slate-950 text-blue-200 [&::-webkit-details-marker]:hidden">
+              <ShieldAlert className="h-5 w-5" />
+            </summary>
+            <div className="absolute right-0 top-full z-30 mt-2 w-60 space-y-3 rounded-2xl border border-slate-700 bg-slate-950 p-3 shadow-2xl shadow-black/50">
+              <label className="block text-xs text-slate-300">
+                Folder
+                <select aria-label="Filter by folder" value={folderFilter} onChange={(event) => setFolderFilter(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white">
+                  <option value="all">All folders</option>
+                  {folders.map((folder) => <option key={folder} value={folder}>{folder}</option>)}
+                </select>
+              </label>
+              <label className="block text-xs text-slate-300">
+                Tag
+                <select aria-label="Filter by tag" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white">
+                  <option value="all">All tags</option>
+                  {tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+                </select>
+              </label>
+              <label className="block text-xs text-slate-300">
+                Sort by
+                <select aria-label="Sort credentials" value={sortBy} onChange={(event) => setSortBy(event.target.value as "updated" | "name" | "created")} className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-white">
+                  <option value="updated">Recently updated</option>
+                  <option value="created">Recently created</option>
+                  <option value="name">Name</option>
+                </select>
+              </label>
+            </div>
+          </details>
         </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {[
+            { value: "all", label: `All (${records.length})` },
+            { value: "favorites", label: `Favorites (${records.filter((record) => record.favorite).length})` },
+            { value: "recent", label: recentCount === null ? "Recent" : `Recent (${recentCount})` },
+            { value: "weak", label: `Weak (${records.filter((record) => record.strength === "Weak").length})` },
+            { value: "reused", label: `Reused (${reusedPasswordIds.size})` },
+          ].map(({ value, label }) => (
+            <button key={value} type="button" onClick={() => {
+              if (value === "recent") {
+                setRecentCutoff(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+              }
+              setQuickFilter(value as typeof quickFilter);
+            }} aria-pressed={quickFilter === value} className={`min-h-10 shrink-0 rounded-full border px-4 py-2 text-xs font-medium sm:text-sm ${quickFilter === value ? "border-cyan-300/60 bg-gradient-to-r from-cyan-500 to-blue-600 text-white" : "border-blue-400/35 bg-slate-950/70 text-slate-200 hover:bg-blue-500/10"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
-        <div className="overflow-x-auto rounded-2xl border border-slate-800">
-          <table className="min-w-full divide-y divide-slate-800 text-left text-sm text-slate-200">
-            <thead className="bg-slate-950/80 text-slate-400">
-              <tr>
-                <th className="px-4 py-3 font-medium">Service</th>
-                <th className="px-4 py-3 font-medium">Username</th>
-                <th className="px-4 py-3 font-medium">Folder</th>
-                <th className="px-4 py-3 font-medium">Strength</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 bg-slate-900">
-              {filteredRecords.map((record) => (
-                <tr key={record.id} className="hover:bg-slate-950/40">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-white">{record.site}</p>
-                    <p className="text-xs text-slate-400">{record.url}</p>
-                    <button type="button" onClick={() => void toggleFavorite(record)} aria-label={record.favorite ? "Remove from favorites" : "Add to favorites"} className="mt-1 text-amber-300">{record.favorite ? "★ Favorite" : "☆ Add favorite"}</button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span>{record.username}</span>
-                    <div className="mt-1 flex gap-2">
-                      <button type="button" onClick={() => void copyToClipboard(record.username, "Username")} className="text-xs text-blue-300">Copy</button>
-                      <button type="button" onClick={() => void copyToClipboard(record.password, "Password")} className="text-xs text-blue-300">Copy password</button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">{record.folder}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300">
-                      {record.strength}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`/passwords/${record.id}`}
-                        className="inline-flex rounded-lg border border-blue-500/40 bg-blue-500/10 px-2.5 py-1.5 text-xs font-medium text-blue-200 hover:bg-blue-500/20"
-                      >
-                        View
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setRevealedPasswords((current) => {
-                          const next = new Set(current);
-                          if (next.has(record.id)) next.delete(record.id);
-                          else next.add(record.id);
-                          return next;
-                        })}
-                        className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-200"
-                      >
-                        {revealedPasswords.has(record.id) ? record.password : "Reveal"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(record)}
-                        className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-200 hover:border-slate-600"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(record)}
-                        className="rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-xs font-medium text-red-200 hover:bg-red-500/20"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredRecords.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
-                    {records.length === 0 ? "Your encrypted vault is empty. Add a credential to begin." : "No credentials match these filters."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <section aria-label="Saved passwords" className="space-y-2 sm:space-y-3">
+        {filteredRecords.map((record) => (
+          <article key={record.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-blue-500/25 bg-gradient-to-r from-blue-950/70 via-slate-900 to-slate-950 p-3 sm:min-h-[84px] sm:gap-4 sm:px-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-300"><KeyRound className="h-6 w-6" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white sm:text-base">{record.site || "Untitled entry"}</p>
+              <p className="mt-0.5 truncate text-xs text-slate-300">{record.username || record.email || "No username"} · {record.folder}</p>
+              {record.tags.length > 0 && <p className="mt-1 truncate text-[10px] text-blue-200">{record.tags.map((tag) => `#${tag}`).join(" ")}</p>}
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${record.strength === "Strong" ? "bg-emerald-500/10 text-emerald-300" : record.strength === "Medium" ? "bg-amber-500/10 text-amber-200" : "bg-red-500/10 text-red-200"}`}>
+              {record.strength}
+            </span>
+            <button type="button" onClick={() => void toggleFavorite(record)} aria-label={record.favorite ? "Remove from favorites" : "Add to favorites"} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-amber-300 hover:bg-amber-500/10">
+              <Star className={`h-5 w-5 ${record.favorite ? "fill-current" : ""}`} />
+            </button>
+            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+              <button type="button" onClick={() => void copyToClipboard(record.password, "Password")} className="rounded-lg border border-blue-400/40 px-2.5 py-2 text-xs text-blue-100">Copy</button>
+              <button type="button" onClick={() => setRevealedPasswords((current) => {
+                const next = new Set(current);
+                if (next.has(record.id)) next.delete(record.id);
+                else next.add(record.id);
+                return next;
+              })} className="rounded-lg border border-slate-700 px-2.5 py-2 text-xs text-slate-200">
+                {revealedPasswords.has(record.id) ? record.password : "Reveal"}
+              </button>
+              <Link href={`/passwords/${record.id}`} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-blue-400/40 px-2.5 py-2 text-xs text-blue-100">
+                Open <ChevronRight className="h-4 w-4" />
+              </Link>
+              <button type="button" onClick={() => handleEdit(record)} className="rounded-lg border border-slate-700 px-2.5 py-2 text-xs text-slate-200">Edit</button>
+              <button type="button" onClick={() => void handleDelete(record)} className="rounded-lg border border-red-500/40 px-2.5 py-2 text-xs text-red-200">Delete</button>
+            </div>
+          </article>
+        ))}
+        {filteredRecords.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-blue-300/40 bg-slate-950/40 p-8 text-center text-sm text-slate-300">
+            {records.length === 0 ? "Your encrypted vault is empty. Add a password to begin." : "No passwords match these filters."}
+          </p>
+        )}
+      </section>
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">

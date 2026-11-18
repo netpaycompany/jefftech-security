@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { ProfileSectionPage } from "@/components/profile/profile-section-page";
 import { useVault } from "@/components/vault/vault-provider";
 import { createClient } from "@/lib/supabase/client";
+import { ensureCurrentBrowserRegistered, forgetCurrentDeviceId, getCurrentDeviceId } from "@/lib/device-registration";
 import { VAULT_ALGORITHM, encryptVaultBytes } from "@/lib/security";
 import { loadEncryptedVaultRecords, type VaultItem } from "@/lib/vault";
 
@@ -17,24 +20,22 @@ type Device = {
   last_seen_at: string | null;
 };
 
-const DEVICE_ID_KEY = "jefftech.device-id";
+function isDevice(value: unknown): value is Device {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.id === "string"
+    && typeof row.device_name === "string"
+    && typeof row.device_type === "string"
+    && typeof row.trust_level === "string"
+    && (row.verified_at === null || typeof row.verified_at === "string")
+    && (row.revoked_at === null || typeof row.revoked_at === "string")
+    && (row.last_seen_at === null || typeof row.last_seen_at === "string");
+}
+
 const BACKUP_AAD = new TextEncoder().encode(JSON.stringify(["jefftech-encrypted-backup", 2]));
 
-function getDeviceId() {
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-    id = crypto.randomUUID();
-    localStorage.setItem(DEVICE_ID_KEY, id);
-  }
-  return id;
-}
-
-function getDeviceName() {
-  const platform = navigator.platform || "Browser";
-  return `${platform} browser`.slice(0, 80);
-}
-
-export function DeviceSync() {
+export function DeviceSync({ profileMode = false }: { profileMode?: boolean }) {
+  const router = useRouter();
   const { session, setRecords, lock } = useVault();
   const [userId, setUserId] = useState("");
   const [deviceId, setDeviceId] = useState("");
@@ -43,7 +44,7 @@ export function DeviceSync() {
   const [notice, setNotice] = useState("");
   const [isBusy, setIsBusy] = useState(false);
 
-  const loadDevices = async () => {
+  const loadDevices = async (): Promise<{ devices: Device[]; userId: string }> => {
     const client = createClient();
     const { data: { user }, error: userError } = await client.auth.getUser();
     if (userError) throw new Error(userError.message);
@@ -54,9 +55,12 @@ export function DeviceSync() {
       .from("devices")
       .select("id,device_name,device_type,trust_level,verified_at,revoked_at,last_seen_at")
       .eq("profile_id", user.id)
+      .is("revoked_at", null)
       .order("created_at", { ascending: false });
     if (deviceError) throw new Error(`Could not load device registrations: ${deviceError.message}`);
-    return { devices: data ?? [], userId: user.id };
+    const rows: unknown[] = data ?? [];
+    if (!rows.every(isDevice)) throw new Error("The registered device list has an invalid format.");
+    return { devices: rows, userId: user.id };
   };
 
   const reloadDevices = async () => {
@@ -66,10 +70,11 @@ export function DeviceSync() {
   };
 
   useEffect(() => {
-    void Promise.resolve()
-      .then(() => setDeviceId(getDeviceId()))
-      .catch((caughtError: unknown) => setError(caughtError instanceof Error ? caughtError.message : "Could not identify this browser."));
-    void loadDevices()
+    void ensureCurrentBrowserRegistered()
+      .then((registeredUserId) => {
+        if (registeredUserId) setDeviceId(getCurrentDeviceId(registeredUserId));
+        return loadDevices();
+      })
       .then(({ devices: loadedDevices, userId: loadedUserId }) => {
         setDevices(loadedDevices);
         setUserId(loadedUserId);
@@ -85,25 +90,15 @@ export function DeviceSync() {
   };
 
   const register = async () => {
-    if (!userId || !deviceId) {
-      setError("Sign in to register this browser.");
-      return;
-    }
     setIsBusy(true);
     setError("");
     setNotice("");
     try {
-      const { error: rpcError } = await createClient().rpc("register_vault_device", {
-        p_device_id: deviceId,
-        p_device_name: getDeviceName(),
-        p_device_type: "web",
-      });
-      if (rpcError) throw new Error(rpcError.message);
+      const registeredUserId = await ensureCurrentBrowserRegistered();
+      if (!registeredUserId) throw new Error("Sign in to register this browser.");
+      setDeviceId(getCurrentDeviceId(registeredUserId));
       await reloadDevices();
-      const { error: auditError } = await createClient().rpc("record_security_event", { p_event_type: "device_registered", p_severity: "info" });
-      setNotice(auditError
-        ? `This browser is registered, but the security event could not be recorded: ${auditError.message}`
-        : "This browser is registered. Unlock the vault here before verifying it.");
+      setNotice("This browser registration is up to date.");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Could not register this browser.");
     } finally {
@@ -134,7 +129,7 @@ export function DeviceSync() {
   };
 
   const revoke = async (device: Device) => {
-    if (!window.confirm(`Revoke registration for ${device.device_name}? This does not revoke the underlying Supabase sign-in token on that device.`)) {
+    if (!window.confirm(`Remove ${device.device_name} from your registered devices? This revokes its Jefftech device registration, but does not end the underlying account sign-in session on that browser.`)) {
       return;
     }
     setIsBusy(true);
@@ -146,16 +141,20 @@ export function DeviceSync() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deviceId: device.id }),
       });
-      const result = await response.json() as { revoked?: boolean; signedOutAllDevices?: boolean; auditLogged?: boolean; error?: string };
-      if (!response.ok && !result.revoked) throw new Error(result.error ?? "Could not revoke the device.");
-      if (device.id === deviceId) lock();
-      await createClient().auth.signOut();
+      const result = await response.json() as { revoked?: boolean; auditLogged?: boolean; error?: string };
+      if (!response.ok || !result.revoked) throw new Error(result.error ?? "Could not remove the device registration.");
+      if (device.id === deviceId) {
+        forgetCurrentDeviceId(userId);
+        lock();
+        const { error: signOutError } = await createClient().auth.signOut({ scope: "local" });
+        if (signOutError) throw new Error(`The registration was removed, but this browser could not be signed out: ${signOutError.message}`);
+        router.replace("/login");
+        return;
+      }
       await reloadDevices();
-      setNotice(!result.signedOutAllDevices
-        ? result.error ?? "Device registration revoked, but active account sessions were not all invalidated."
-        : !result.auditLogged
-          ? "Device registration revoked and all sessions invalidated, but the security event could not be recorded."
-          : "Device registration revoked and all account sessions invalidated. Re-authenticate to continue.");
+      setNotice(result.auditLogged
+        ? "Device registration removed. The account session on that browser remains active; sign out there if you no longer trust it."
+        : "Device registration removed, but its security notification could not be recorded.");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Could not revoke the device.");
     } finally {
@@ -246,8 +245,7 @@ export function DeviceSync() {
     }
   };
 
-  return (
-    <AppShell title="Device Synchronization" activePath="/devices">
+  const content = (
       <div className="space-y-6">
         <section className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -274,7 +272,7 @@ export function DeviceSync() {
               <h2 className="mt-2 text-xl font-semibold text-white">Known devices</h2>
             </div>
             <button type="button" disabled={isBusy || !userId} onClick={() => void register()} className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200 disabled:opacity-50">
-              Register this browser
+              Refresh registration
             </button>
           </div>
           <ul className="mt-5 space-y-3">
@@ -289,7 +287,7 @@ export function DeviceSync() {
                     <button type="button" disabled={isBusy || !session} onClick={() => void verify()} className="rounded-lg border border-blue-500/40 px-3 py-2 text-xs text-blue-200 disabled:opacity-50">Verify after unlock</button>
                   )}
                   {!device.revoked_at && (
-                    <button type="button" disabled={isBusy} onClick={() => void revoke(device)} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-200 disabled:opacity-50">Revoke</button>
+                    <button type="button" disabled={isBusy} onClick={() => void revoke(device)} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-200 disabled:opacity-50">Remove device</button>
                   )}
                 </div>
               </li>
@@ -297,7 +295,7 @@ export function DeviceSync() {
             {devices.length === 0 && <li className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-400">No device registrations loaded.</li>}
           </ul>
           <p className="mt-4 text-xs leading-5 text-slate-500">
-            Device registration is currently an account-owned trust label, not a cryptographic server-side session binding. Revoking removes trust in this app and locks this browser if selected; it cannot invalidate a stolen Supabase token on another device. Sign out there and rotate the vault key if compromised.
+            Devices are identified by this browser&apos;s local installation ID and browser/platform information. Removing a device revokes its Jefftech registration; it does not end that browser&apos;s Supabase sign-in session. If you no longer trust that device, change your account password and sign out from the identity provider&apos;s active-session controls.
           </p>
         </section>
 
@@ -310,7 +308,12 @@ export function DeviceSync() {
 
         {(error || notice) && <p role={error ? "alert" : "status"} className={`rounded-xl border p-3 text-sm ${error ? "border-red-500/25 bg-red-500/5 text-red-200" : "border-emerald-500/25 bg-emerald-500/5 text-emerald-200"}`}>{error || notice}</p>}
       </div>
-    </AppShell>
+  );
+
+  return profileMode ? (
+    <ProfileSectionPage title="My Devices" activeHref="/profile/my-devices">{content}</ProfileSectionPage>
+  ) : (
+    <AppShell title="Device Synchronization" activePath="/devices">{content}</AppShell>
   );
 }
 

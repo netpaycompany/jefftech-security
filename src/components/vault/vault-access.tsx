@@ -29,6 +29,7 @@ import {
 } from "@/lib/vault";
 import { commitPhotoKeyRotation, preparePhotoKeyRotation } from "@/lib/photo-library";
 import { createClient } from "@/lib/supabase/client";
+import { VAULT_CONSENT_SESSION_KEY } from "@/lib/vault-consent";
 
 type VaultMetadata = {
   userId: string;
@@ -63,7 +64,7 @@ type PendingRotation = {
   }[];
 };
 
-type PageState = "loading" | "setup" | "unlock" | "recover" | "unlocked";
+type PageState = "loading" | "consent" | "setup" | "unlock" | "recover" | "unlocked";
 const RECOVERY_DISPLAY_MS = 5 * 60 * 1000;
 
 function isVaultKeyRow(value: unknown): value is VaultKeyRow {
@@ -168,7 +169,9 @@ export function VaultAccess() {
     }
     if (!vault) {
       setMetadata(null);
-      setPageState("setup");
+      const consentAccepted = window.sessionStorage.getItem(VAULT_CONSENT_SESSION_KEY) === "accepted";
+      window.sessionStorage.removeItem(VAULT_CONSENT_SESSION_KEY);
+      setPageState(consentAccepted ? "setup" : "consent");
       return;
     }
 
@@ -753,6 +756,14 @@ export function VaultAccess() {
 
   const readLegacyCount = legacyCount > 0;
   const visiblePageState = pageState === "unlocked" && !session ? "unlock" : pageState;
+  const acceptVaultConsent = () => {
+    setError("");
+    setNotice("");
+    setPageState("setup");
+  };
+  const declineVaultConsent = () => {
+    router.replace("/");
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
@@ -767,6 +778,48 @@ export function VaultAccess() {
 
         {visiblePageState === "loading" && (
           <p role="status" className="text-sm text-slate-400">Loading vault encryption settings...</p>
+        )}
+
+        {visiblePageState === "consent" && (
+          <section aria-labelledby="vault-consent-title">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-blue-300">Your permission</p>
+            <h1 id="vault-consent-title" className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
+              Allow Jefftech Security to encrypt your vault data?
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Jefftech Security will encrypt the information you choose to save in your vault on this device before it is synced to your account. Your vault master password stays on your device and is never sent to us.
+            </p>
+            <div className="mt-5 space-y-3 rounded-2xl border border-blue-500/25 bg-slate-950/60 p-4 text-sm leading-6 text-slate-300">
+              <p>
+                This is not permission to read passwords from other websites or access everything on your device. You choose which records to add, and you can manage them in your vault.
+              </p>
+              {readLegacyCount && (
+                <p className="border-t border-slate-800 pt-3">
+                  We found {legacyCount} old browser-stored {legacyCount === 1 ? "credential" : "credentials"}. They will only be imported if you separately confirm during setup.
+                </p>
+              )}
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              Jefftech cannot decrypt your vault. If you lose both your master password and recovery key, your encrypted data cannot be recovered.
+            </p>
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={declineVaultConsent}
+                className="min-h-11 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                onClick={acceptVaultConsent}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500"
+              >
+                Allow and continue
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </section>
         )}
 
         {visiblePageState === "setup" && !setupRecoveryCode && (
