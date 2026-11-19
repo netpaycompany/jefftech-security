@@ -29,7 +29,7 @@ export default function SettingsPage() {
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Session controls</p>
           <div className="mt-5 space-y-4 text-sm text-slate-300">
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-              Auto-lock timeout: 15 minutes
+              Vault stays unlocked in this tab unless you lock it or sign out
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
               Browser extension lock: automatic after inactivity

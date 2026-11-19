@@ -19,6 +19,7 @@ import {
   BadgeCheck,
   Home,
   LockKeyhole,
+  Mail,
   Menu,
   Plus,
   Shield,
@@ -28,6 +29,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { PhotoAccessPrompt } from "@/components/photos/photo-access-prompt";
 import { VaultLockButton } from "@/components/vault/vault-lock-button";
+import { VaultSessionGate } from "@/components/vault/vault-session-gate";
 import { DeviceRegistration } from "@/components/devices/device-registration";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
@@ -54,6 +56,7 @@ const navItems = [
 const adminNavItems = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
   { name: "User Management", href: "/admin/users", icon: Users },
+  { name: "Email Notifications", href: "/admin/notifications", icon: Mail },
 ];
 
 const mobileNavItems = [
@@ -199,7 +202,9 @@ export function AppShell({
             </div>
           </header>
 
-          <div className={cn("p-4 pb-28 sm:p-6 sm:pb-28 lg:p-8", !adminMode && "lg:pb-32")}>{children}</div>
+          <div className={cn("p-4 pb-28 sm:p-6 sm:pb-28 lg:p-8", !adminMode && "lg:pb-32")}>
+            {adminMode ? children : <VaultSessionGate>{children}</VaultSessionGate>}
+          </div>
         </main>
       </div>
       {!adminMode && (

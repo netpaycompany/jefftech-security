@@ -1,3 +1,5 @@
+import { generatePassword } from "../utils/security";
+
 type CredentialMatch = { id: string; site: string; username: string };
 type RuntimeResponse<T> = { ok: true; result: T } | { ok: false; error: string };
 
@@ -86,6 +88,37 @@ function addCloseButton(container: HTMLElement) {
   container.append(close);
 }
 
+function setInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function suggestStrongPassword(container: HTMLElement) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "Generate strong password";
+  button.addEventListener("click", () => {
+    const fields = passwordInputs();
+    if (fields.length === 0) return;
+    const generated = generatePassword(20, {
+      uppercase: true,
+      lowercase: true,
+      numbers: true,
+      symbols: true,
+    });
+    const newPasswordFields = fields.filter((field) => field.autocomplete.toLowerCase() === "new-password");
+    const targets = newPasswordFields.length > 0
+      ? newPasswordFields
+      : fields.length > 1 ? fields : [fields[0]];
+    for (const field of targets) setInputValue(field, generated);
+    button.textContent = "Strong password filled";
+    window.setTimeout(() => { button.textContent = "Generate another password"; }, 2500);
+  });
+  container.append(button);
+}
+
 async function showSuggestions() {
   const input = passwordInputs()[0];
   if (!input) {
@@ -105,6 +138,7 @@ async function showSuggestions() {
   hint.className = "hint";
   hint.textContent = "Credentials are matched to this exact HTTPS origin. Nothing is filled until you choose.";
   container.append(brand, title, hint);
+  suggestStrongPassword(container);
 
   try {
     const result = await message<{ unlocked: boolean; matches: CredentialMatch[] }>({ type: "content:scan" });
@@ -200,7 +234,17 @@ function showSavePrompt(candidate: { site: string; url: string; username: string
   }, 60_000);
 }
 
-async function observeSuccessfulLogin(form: HTMLFormElement, passwordInput: HTMLInputElement) {
+function looksLikeSignupForm(form: HTMLFormElement) {
+  const passwordFields = [...form.querySelectorAll<HTMLInputElement>('input[type="password"]')].filter(visible);
+  const submitText = [...form.querySelectorAll<HTMLElement>('button[type="submit"], input[type="submit"]')]
+    .map((element) => `${element.textContent ?? ""} ${element.getAttribute("value") ?? ""}`)
+    .join(" ");
+  return passwordFields.some((field) => field.autocomplete.toLowerCase() === "new-password")
+    || passwordFields.length > 1
+    || /\b(sign\s?up|register|create account|join)\b/i.test(submitText);
+}
+
+async function observeSuccessfulLogin(form: HTMLFormElement, passwordInput: HTMLInputElement, saveOnSubmit: boolean) {
   try {
     await message<{ enabled: boolean }>({ type: "content:check" });
   } catch {
@@ -214,12 +258,16 @@ async function observeSuccessfulLogin(form: HTMLFormElement, passwordInput: HTML
     password: passwordInput.value,
   };
   if (!candidate.password) return;
+  if (saveOnSubmit) {
+    void saveSuccessfulCandidate(candidate);
+    return;
+  }
 
   window.setTimeout(() => {
     const stillHasUnclearedPassword = passwordInput.isConnected && passwordInput.value.length > 0;
     const formStillVisible = form.isConnected && form.getClientRects().length > 0;
     if (!stillHasUnclearedPassword || !formStillVisible) {
-      showSavePrompt(candidate);
+      void saveSuccessfulCandidate(candidate);
     } else {
       candidate.password = "";
       candidate.username = "";
@@ -227,11 +275,35 @@ async function observeSuccessfulLogin(form: HTMLFormElement, passwordInput: HTML
   }, 1500);
 }
 
+async function saveSuccessfulCandidate(candidate: { site: string; url: string; username: string; password: string }) {
+  try {
+    await message({ type: "content:save-candidate", ...candidate });
+    candidate.password = "";
+    candidate.username = "";
+    const container = ensurePanel();
+    container.replaceChildren();
+    addCloseButton(container);
+    const brand = document.createElement("p");
+    brand.className = "brand";
+    brand.textContent = "Jefftech Security";
+    const title = document.createElement("p");
+    title.className = "title";
+    title.textContent = "Login saved to your vault";
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = "This website login was encrypted before it was synced.";
+    container.append(brand, title, hint);
+    window.setTimeout(clearPanel, 5000);
+  } catch {
+    showSavePrompt(candidate);
+  }
+}
+
 function onSubmit(event: Event) {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
   const input = [...form.querySelectorAll<HTMLInputElement>('input[type="password"]')].find(visible);
-  if (input) observeSuccessfulLogin(form, input);
+  if (input) void observeSuccessfulLogin(form, input, looksLikeSignupForm(form));
 }
 
 function scheduleScan() {
@@ -266,16 +338,8 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     return false;
   }
   const usernameInput = usernameFor(passwordInput);
-  if (usernameInput) {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    setter?.call(usernameInput, payload.username);
-    usernameInput.dispatchEvent(new Event("input", { bubbles: true }));
-    usernameInput.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  setter?.call(passwordInput, payload.password);
-  passwordInput.dispatchEvent(new Event("input", { bubbles: true }));
-  passwordInput.dispatchEvent(new Event("change", { bubbles: true }));
+  if (usernameInput) setInputValue(usernameInput, payload.username);
+  setInputValue(passwordInput, payload.password);
   sendResponse({ ok: true });
   return false;
 });

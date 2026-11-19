@@ -122,7 +122,7 @@ begin
 
   insert into public.devices (id, profile_id, device_name, device_type, trust_level, last_seen_at)
   values (p_device_id, v_user_id, btrim(p_device_name), p_device_type, 'unverified', now())
-  on conflict (id) do update
+  on conflict on constraint devices_pkey do update
     set device_name = excluded.device_name,
         device_type = excluded.device_type,
         last_seen_at = now()

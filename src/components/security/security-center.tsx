@@ -138,7 +138,7 @@ export function SecurityCenter({ profileMode = false }: { profileMode?: boolean 
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-white sm:text-lg">Security Status</p>
                 <h2 className={`mt-1 text-2xl font-bold sm:text-3xl ${needsAttention ? "text-amber-300" : "text-emerald-300"}`}>{securityStatus}</h2>
-                <p className="mt-1 text-xs text-slate-300 sm:text-sm">{securitySummary} Auto-locks after 15 minutes of inactivity.</p>
+                <p className="mt-1 text-xs text-slate-300 sm:text-sm">{securitySummary} The vault stays unlocked in this tab until you lock it, sign out, or close the tab.</p>
               </div>
             </div>
             <span aria-hidden="true" className="hidden h-24 w-24 shrink-0 items-center justify-center rounded-full border border-blue-400/40 bg-blue-500/10 text-blue-300 sm:flex">

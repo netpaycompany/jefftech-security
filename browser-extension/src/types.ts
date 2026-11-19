@@ -41,11 +41,9 @@ export type VaultKeyEnvelope = {
 };
 
 export type ExtensionSettings = {
-  autoLockMinutes: number;
   clipboardClearSeconds: number;
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
-  autoLockMinutes: 5,
   clipboardClearSeconds: 30,
 };

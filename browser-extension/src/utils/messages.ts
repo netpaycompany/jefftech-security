@@ -39,7 +39,7 @@ export const popupMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("settings") }).strict(),
   z.object({
     type: z.literal("save-settings"),
-    settings: z.object({ autoLockMinutes: z.number().int().min(1).max(60), clipboardClearSeconds: z.number().int().min(0).max(120) }).strict(),
+    settings: z.object({ clipboardClearSeconds: z.number().int().min(0).max(120) }).strict(),
   }).strict(),
   z.object({ type: z.literal("clipboard-copy"), id: z.string().uuid(), field: z.enum(["username", "password"]) }).strict(),
 ]);

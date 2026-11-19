@@ -104,8 +104,8 @@ export default function HomePage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link href="/login" className="hidden text-sm text-slate-300 transition hover:text-white sm:inline">
-              Sign in
+            <Link href="/login">
+              <Button variant="secondary" size="sm">Login</Button>
             </Link>
             <Link href="/signup">
               <Button size="sm">Create account</Button>

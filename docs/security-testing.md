@@ -28,7 +28,7 @@
 
 These controls prevent stale application writes and record substitution while the database maintains its revision state. A privileged database operator restoring an entire older database snapshot can also restore valid old ciphertext and revisions; clients cannot detect a full database rollback without an independent trusted monotonic checkpoint.
 
-Browser memory cannot be guaranteed to be securely erased. Locking zeros key byte arrays, drops references to decrypted records, and auto-locks after inactivity, but JavaScript strings, garbage-collected copies, browser extensions, injected scripts and operating-system memory remain outside the app's control.
+Browser memory cannot be guaranteed to be securely erased. The website keeps its vault key in tab-scoped `sessionStorage` so the vault stays unlocked across reloads in the same tab; lock and sign-out remove the saved key. The key is available to same-origin JavaScript while saved, so this trades some protection for convenience. The browser extension retains its unlocked key in memory-backed `chrome.storage.session` without an inactivity timeout and restores it after service-worker suspension. Explicit lock, disconnect, session invalidation, browser restart, or extension reload/update clears it. This also trades protection for convenience. Locking zeros key byte arrays and drops references to decrypted records, but JavaScript strings, garbage-collected copies, browser extensions, injected scripts and operating-system memory remain outside the app's control.
 
 ## Test checklist
 
@@ -73,7 +73,7 @@ Authentication against a real Jefftech session, browser autofill behavior, permi
    - Confirm tokens exist only in `chrome.storage.session`, the PKCE verifier is transient, and the extension manifest contains no service-role key or unnecessary default site access.
    - Confirm the master password is not persisted or sent to the backend; lock/worker termination drops the key and decrypted records, and unlock reloads only password records.
    - Confirm content-script messages are accepted only from the extension's top frame on the same HTTPS origin; reject page-origin messages, frames, malformed payloads, ungranted origins, and credentials for another origin.
-   - Verify dynamically inserted forms, multiple credentials for one origin, explicit fill selection, no automatic form submission, and user-confirmed save/update behavior.
+   - Verify dynamically inserted forms, multiple credentials for one origin, explicit fill selection, no automatic form submission, strong password generation, automatic save detection for signup forms, and locked-vault save fallback behavior.
    - Verify extension capture is user initiated and the user approves the values before the encrypted save RPC.
 
 5. Admin checks

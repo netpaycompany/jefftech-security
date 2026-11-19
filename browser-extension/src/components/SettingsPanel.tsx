@@ -11,7 +11,6 @@ type Props = {
 };
 
 export function SettingsPanel({ settings, onSave, onDisconnect, onOpenWebsite }: Props) {
-  const [autoLockMinutes, setAutoLockMinutes] = useState(settings.autoLockMinutes);
   const [clipboardClearSeconds, setClipboardClearSeconds] = useState(settings.clipboardClearSeconds);
   const [sites, setSites] = useState<string[]>([]);
   const [siteError, setSiteError] = useState("");
@@ -55,11 +54,6 @@ export function SettingsPanel({ settings, onSave, onDisconnect, onOpenWebsite }:
         <p className="text-xs text-slate-400">Preferences stay on this browser and are not synced.</p>
       </div>
       <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-        <label className="field-label">Auto-lock after
-          <select className="field-control" value={autoLockMinutes} onChange={(event) => setAutoLockMinutes(Number(event.target.value))}>
-            {[1, 5, 10, 15, 30, 60].map((minutes) => <option key={minutes} value={minutes}>{minutes} minute{minutes === 1 ? "" : "s"}</option>)}
-          </select>
-        </label>
         <label className="field-label">Clear copied password after
           <select className="field-control" value={clipboardClearSeconds} onChange={(event) => setClipboardClearSeconds(Number(event.target.value))}>
             <option value={0}>Do not clear automatically</option>
@@ -72,7 +66,7 @@ export function SettingsPanel({ settings, onSave, onDisconnect, onOpenWebsite }:
           disabled={busy}
           onClick={() => {
             setBusy(true);
-            void onSave({ autoLockMinutes, clipboardClearSeconds }).finally(() => setBusy(false));
+            void onSave({ clipboardClearSeconds }).finally(() => setBusy(false));
           }}
         >
           <LockKeyhole size={15} /> Save preferences
@@ -100,7 +94,7 @@ export function SettingsPanel({ settings, onSave, onDisconnect, onOpenWebsite }:
         <ExternalLink size={14} /> Manage connected extensions on Jefftech
       </button>
       <button type="button" className="danger-button w-full" onClick={onDisconnect}>Disconnect this account</button>
-      <p className="text-[10px] leading-4 text-slate-500">Disconnecting revokes this extension session, clears its session token, and locks the vault.</p>
+      <p className="text-[10px] leading-4 text-slate-500">The vault stays unlocked in memory until you lock it, disconnect, or the browser ends the extension session. This keeps the vault key available while you save credentials, but means anyone using this browser profile can access the unlocked vault.</p>
     </section>
   );
 }

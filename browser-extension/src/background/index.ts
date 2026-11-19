@@ -21,12 +21,13 @@ import type { PasswordRecord, PasswordSummary, VaultPassword } from "../types";
 import { analyzePasswords, originMatches, passwordStrength } from "../utils/security";
 import { contentMessageSchema, popupMessageSchema } from "../utils/messages";
 
+const UNLOCKED_VAULT_STORAGE_KEY = "extension.unlockedVault";
+
 let vaultKey: Uint8Array | null = null;
 let vaultId: string | null = null;
 let keyVersion: string | null = null;
 let activeUserId: string | null = null;
 let records = new Map<string, VaultPassword>();
-let autoLockTimer: ReturnType<typeof setTimeout> | null = null;
 
 function clearRecords() {
   for (const record of records.values()) {
@@ -41,6 +42,84 @@ function clearRecords() {
     record.passwordHistory = [];
   }
   records.clear();
+}
+
+function isUnlockedVaultSnapshot(value: unknown): value is {
+  key: number[];
+  vaultId: string;
+  keyVersion: string;
+  userId: string;
+} {
+  if (typeof value !== "object" || value === null) return false;
+  const snapshot = value as Record<string, unknown>;
+  return Array.isArray(snapshot.key)
+    && snapshot.key.length === 32
+    && snapshot.key.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)
+    && typeof snapshot.vaultId === "string"
+    && snapshot.vaultId.length > 0
+    && typeof snapshot.keyVersion === "string"
+    && /^v[1-9]\d*$/.test(snapshot.keyVersion)
+    && typeof snapshot.userId === "string"
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(snapshot.userId);
+}
+
+async function clearUnlockedVaultSnapshot() {
+  await chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
+  await chrome.storage.session.remove(UNLOCKED_VAULT_STORAGE_KEY);
+}
+
+async function restoreUnlockedVault() {
+  if (vaultKey) return true;
+  await chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
+  const stored = await chrome.storage.session.get(UNLOCKED_VAULT_STORAGE_KEY);
+  const snapshot = stored[UNLOCKED_VAULT_STORAGE_KEY];
+  if (!isUnlockedVaultSnapshot(snapshot)) {
+    if (snapshot !== undefined) await clearUnlockedVaultSnapshot();
+    return false;
+  }
+
+  const key = Uint8Array.from(snapshot.key);
+  try {
+    const tokens = await chrome.storage.session.get("extension.tokens");
+    const profileId = (tokens["extension.tokens"] as { profileId?: unknown } | undefined)?.profileId;
+    if (profileId !== snapshot.userId) {
+      await clearUnlockedVaultSnapshot();
+      key.fill(0);
+      return false;
+    }
+
+    const envelope = await getVaultEnvelope();
+    if (envelope.vault_id !== snapshot.vaultId || envelope.key_version !== snapshot.keyVersion) {
+      await clearUnlockedVaultSnapshot();
+      key.fill(0);
+      return false;
+    }
+    const loaded = await loadUnlockedRecords(key, snapshot.userId, snapshot.vaultId, snapshot.keyVersion);
+    vaultKey = key;
+    activeUserId = snapshot.userId;
+    vaultId = snapshot.vaultId;
+    keyVersion = snapshot.keyVersion;
+    records = loaded;
+    return true;
+  } catch (error) {
+    key.fill(0);
+    throw error;
+  }
+}
+
+async function persistUnlockedVaultSnapshot() {
+  if (!vaultKey || !vaultId || !keyVersion || !activeUserId) {
+    throw new Error("The vault must be unlocked before its browser-session state can be saved.");
+  }
+  await chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
+  await chrome.storage.session.set({
+    [UNLOCKED_VAULT_STORAGE_KEY]: {
+      key: Array.from(vaultKey),
+      vaultId,
+      keyVersion,
+      userId: activeUserId,
+    },
+  });
 }
 
 async function fillRecordOnActiveTab(id: string) {
@@ -64,25 +143,17 @@ async function fillRecordOnActiveTab(id: string) {
   } catch {
     throw new Error("Reload the website tab and try autofill again.");
   }
-  await touchVault();
   return { filled: true };
 }
 
-function lockVault() {
-  if (autoLockTimer) clearTimeout(autoLockTimer);
-  autoLockTimer = null;
+async function lockVault() {
   vaultKey?.fill(0);
   vaultKey = null;
   vaultId = null;
   keyVersion = null;
   activeUserId = null;
   clearRecords();
-}
-
-async function touchVault() {
-  if (autoLockTimer) clearTimeout(autoLockTimer);
-  const settings = await getSettings();
-  autoLockTimer = setTimeout(lockVault, settings.autoLockMinutes * 60_000);
+  await clearUnlockedVaultSnapshot();
 }
 
 function requireUnlocked() {
@@ -93,11 +164,12 @@ function requireUnlocked() {
 }
 
 async function requireActiveSession() {
+  await restoreUnlockedVault();
   requireUnlocked();
   try {
     await validateExtensionSession();
   } catch (error) {
-    lockVault();
+    await lockVault();
     const message = error instanceof Error ? error.message : "The server could not verify the extension session.";
     throw new Error(`Vault locked because its session could not be verified. ${message}`);
   }
@@ -155,7 +227,7 @@ async function loadUnlockedRecords(key: Uint8Array, userId: string, activeVaultI
 }
 
 async function unlock(masterPassword: string) {
-  lockVault();
+  await lockVault();
   let unwrapped: Uint8Array | null = null;
   try {
     const envelope = await getVaultEnvelope();
@@ -175,24 +247,22 @@ async function unlock(masterPassword: string) {
     vaultId = envelope.vault_id;
     keyVersion = envelope.key_version;
     records = loaded;
-    await touchVault();
+    await persistUnlockedVaultSnapshot();
     return { unlocked: true, count: records.size };
   } catch (error) {
     unwrapped?.fill(0);
-    lockVault();
+    await lockVault();
     throw error;
   }
 }
 
 async function listPasswords() {
   await requireActiveSession();
-  await touchVault();
   return [...records.values()].map(summarize);
 }
 
 async function getPassword(id: string) {
   await requireActiveSession();
-  await touchVault();
   const record = records.get(id);
   if (!record) throw new Error("Password record not found.");
   return { ...record };
@@ -251,7 +321,6 @@ async function savePassword(input: { id?: string; record: PasswordRecord }) {
   });
   if (savedRevision !== revision) throw new Error("The server returned an unexpected password revision.");
   records.set(id, { ...record, id, revision });
-  await touchVault();
   return { id, revision };
 }
 
@@ -271,26 +340,28 @@ async function removePassword(id: string, revision: number) {
     record.passwordHistory = [];
   }
   records.delete(id);
-  await touchVault();
 }
 
 async function getHealth() {
   await requireActiveSession();
-  await touchVault();
   return analyzePasswords([...records.values()]);
 }
 
 async function getState() {
   try {
     const authorization = await getAuthorizationState();
-    if (!authorization.authenticated) lockVault();
+    if (!authorization.authenticated) {
+      await lockVault();
+    } else if (await restoreUnlockedVault()) {
+      await requireActiveSession();
+    }
     return {
       authenticated: authorization.authenticated,
       unlocked: Boolean(vaultKey),
       count: vaultKey ? records.size : 0,
     };
   } catch (error) {
-    lockVault();
+    await lockVault();
     throw error;
   }
 }
@@ -301,7 +372,7 @@ async function handlePopupMessage(message: z.infer<typeof popupMessageSchema>) {
       await connectAccount();
       return getState();
     case "disconnect":
-      lockVault();
+      await lockVault();
       await disconnectAccount();
       return getState();
     case "state":
@@ -309,7 +380,7 @@ async function handlePopupMessage(message: z.infer<typeof popupMessageSchema>) {
     case "unlock":
       return unlock(message.masterPassword);
     case "lock":
-      lockVault();
+      await lockVault();
       return getState();
     case "list":
       return listPasswords();
@@ -327,7 +398,6 @@ async function handlePopupMessage(message: z.infer<typeof popupMessageSchema>) {
       return getSettings();
     case "save-settings":
       await saveSettings(message.settings);
-      if (vaultKey) await touchVault();
       return message.settings;
     case "clipboard-copy": {
       const record = await getPassword(message.id);
@@ -351,9 +421,8 @@ async function handleContentMessage(
   }
 
   if (message.type === "content:scan") {
-    if (!vaultKey) return { unlocked: false, matches: [] };
+    if (!await restoreUnlockedVault()) return { unlocked: false, matches: [] };
     await requireActiveSession();
-    await touchVault();
     const matches = [...records.values()]
       .filter((record) => originMatches(record.url, origin))
       .map(({ id, site, username, email }) => ({ id, site, username: username || email }));
@@ -371,7 +440,6 @@ async function handleContentMessage(
       username: record.username || record.email,
       password: record.password,
     }, { frameId: 0 });
-    await touchVault();
     return { filled: true };
   }
 

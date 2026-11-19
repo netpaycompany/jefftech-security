@@ -279,9 +279,6 @@ export async function getSettings(): Promise<ExtensionSettings> {
   if (typeof stored !== "object" || stored === null) return DEFAULT_SETTINGS;
   const values = stored as Partial<ExtensionSettings>;
   return {
-    autoLockMinutes: Number.isInteger(values.autoLockMinutes) && values.autoLockMinutes! >= 1 && values.autoLockMinutes! <= 60
-      ? values.autoLockMinutes!
-      : DEFAULT_SETTINGS.autoLockMinutes,
     clipboardClearSeconds: Number.isInteger(values.clipboardClearSeconds) && values.clipboardClearSeconds! >= 0 && values.clipboardClearSeconds! <= 120
       ? values.clipboardClearSeconds!
       : DEFAULT_SETTINGS.clipboardClearSeconds,

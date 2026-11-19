@@ -67,9 +67,10 @@ The website's Settings page lists and revokes connected extension sessions. The 
 
 ## Implemented functionality and known limits
 
-- Connect/disconnect account, session refresh, account-side session revocation, expired-session handling, vault unlock/lock, and inactivity auto-lock.
+- Connect/disconnect account, session refresh, account-side session revocation, expired-session handling, and vault unlock/lock. The unlocked vault key is held in memory-backed `chrome.storage.session` so it can be restored after service-worker suspension; it is cleared by explicit lock, disconnect, session invalidation, browser restart, or extension reload/update. It is not written to persistent storage. This trades protection for convenience: anyone with access to the active browser profile can use the unlocked vault.
 - Search and list encrypted password records; create, edit, and delete records; folders, favorites, multiple records per site, and copy username/password.
-- User-approved exact-origin autofill, dynamic form observation, and a user-confirmed save/update prompt after likely login completion.
+- User-approved exact-origin autofill, dynamic form observation, one-click secure password generation for detected password forms, and automatic encrypted saving for detected signup forms after submission. Likely successful sign-ins are automatically saved when the form clears or disappears; if the vault is locked, the extension offers a save prompt after the vault is unlocked.
+- Website access is granted per HTTPS site from the extension popup; the extension does not request access to every website by default. Saved logins are shown only for the exact matching origin, and autofill always requires the user to choose a credential and click **Fill**.
 - Cryptographically secure password generation and local weak/reused/old-password analysis.
 - Browser UI screens for welcome/connect, unlock, dashboard, password list/details/editor, generator, security health, and settings.
 - The extension currently syncs password records only. Other website vault item types are not exposed. Folder names are fields inside encrypted password records, not separate server-side folder resources.

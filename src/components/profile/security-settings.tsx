@@ -45,8 +45,8 @@ export function SecuritySettings() {
           <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
             <ShieldCheck className="h-5 w-5 text-emerald-300" />
             <div>
-              <p className="text-sm font-medium text-white">Automatic vault lock</p>
-              <p className="text-xs text-slate-400">Locks after 15 minutes of inactivity to protect decrypted vault data.</p>
+              <p className="text-sm font-medium text-white">Browser-session vault unlock</p>
+              <p className="text-xs text-slate-400">Stays unlocked in this tab until you lock the vault, sign out, or close the tab.</p>
             </div>
           </div>
         </div>

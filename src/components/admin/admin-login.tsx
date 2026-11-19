@@ -28,10 +28,11 @@ export function AdminLogin() {
       if (signInError) throw new Error("Sign-in failed. Check your credentials.");
       const response = await fetch("/api/admin/overview", { cache: "no-store" });
       if (!response.ok) {
+        const body = await response.json() as { error?: string };
         await client.auth.signOut();
         throw new Error(response.status === 403
           ? "This account does not have the administrator role."
-          : "Administrator authentication could not be verified.");
+          : body.error ?? "Administrator authentication could not be verified.");
       }
       router.replace("/admin");
     } catch (caughtError) {

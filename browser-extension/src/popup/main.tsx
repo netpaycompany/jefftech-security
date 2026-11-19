@@ -413,7 +413,7 @@ function PopupApp() {
           <div className="brand-mark"><LockKeyhole size={23} /></div>
           <p className="eyebrow">Account connected</p>
           <h1 className="welcome-title">Unlock your vault</h1>
-          <p className="welcome-copy">Enter your vault master password. It is used only to unwrap the vault key locally and is never stored or sent.</p>
+          <p className="welcome-copy">Enter your vault master password. It is used only to unwrap the vault key locally and is never stored or sent. The vault stays unlocked in memory until you lock it or the browser ends the extension session.</p>
           <form className="mt-5 space-y-3" onSubmit={(event) => void unlock(event)}>
             <label className="field-label">Vault master password
               <input
@@ -468,6 +468,7 @@ function PopupApp() {
               </div>
               <span className="secure-pill"><Check size={12} /> Unlocked</span>
             </div>
+            <p className="mt-3 text-[11px] leading-5 text-amber-200/80">The vault stays unlocked for this browser session so credentials can be saved. Lock it before leaving this browser unattended.</p>
             <div className="mt-5 grid grid-cols-3 gap-2">
               <Metric value={health.total} label="Passwords" />
               <Metric value={health.weak} label="Weak" warning={health.weak > 0} />
