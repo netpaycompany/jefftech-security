@@ -64,7 +64,7 @@ input[type="checkbox"] { accent-color: #3b82f6; }
 .quick-action { display: flex; align-items: center; gap: 9px; min-height: 45px; padding: 9px 10px; border: 1px solid #1d2d42; border-radius: 12px; background: #0c1927; color: #d7e2ef; font-size: 11px; text-align: left; }
 .quick-action:hover { border-color: #315174; background: #102238; }
 .quick-action-icon { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 8px; background: #1d4ed822; color: #93c5fd; }
-.site-permission-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid #22354c; border-radius: 13px; background: #091725; }
+.site-permission-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid #22354c; border-radius: 13px; background: #091725; }
 .metric-card { padding: 12px; border: 1px solid #1d2d42; border-radius: 14px; background: #0b1826; }
 .detail-card { padding: 14px; border: 1px solid #1d2d42; border-radius: 17px; background: linear-gradient(145deg, #0d1b2b, #091522); }
 .detail-row { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: 9px; padding-top: 9px; border-top: 1px solid #1d2d42; }

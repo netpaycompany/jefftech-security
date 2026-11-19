@@ -24,7 +24,7 @@ import { PasswordList } from "../components/PasswordList";
 import { SettingsPanel } from "../components/SettingsPanel";
 import type { ExtensionSettings, PasswordRecord, PasswordSummary, VaultPassword } from "../types";
 import { DEFAULT_SETTINGS } from "../types";
-import { isAllowedOrigin, passwordStrength } from "../utils/security";
+import { generatePassword, isAllowedOrigin, passwordStrength } from "../utils/security";
 import "./styles.css";
 
 declare const __JEFFTECH_APP_URL__: string;
@@ -309,6 +309,39 @@ function PopupApp() {
     }
   };
 
+  const generateAndSaveForCurrentSite = async () => {
+    if (!activeOrigin) {
+      setError("Open an HTTPS website first to generate a saved password for it.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const password = generatePassword(24, {
+        uppercase: true,
+        lowercase: true,
+        numbers: true,
+        symbols: true,
+      });
+      const record = {
+        ...emptyRecord(activeOrigin),
+        password,
+        strength: passwordStrength(password),
+      };
+      await request<{ id: string; revision: number }>({
+        type: "save-record",
+        record,
+      });
+      await refreshVault();
+      setNotice(`A strong password was generated and encrypted in your vault for ${new URL(activeOrigin).hostname}.`);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Could not generate and save a password.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const deleteRecord = async () => {
     if (!selectedRecord || !window.confirm(`Permanently delete the password for ${selectedRecord.site}?`)) return;
     setBusy(true);
@@ -463,7 +496,7 @@ function PopupApp() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="eyebrow">Encrypted vault</p>
-                <p className="mt-1 text-lg font-semibold text-white">You're protected</p>
+                <p className="mt-1 text-lg font-semibold text-white">You&apos;re protected</p>
                 <p className="mt-1 text-xs text-slate-400">Decryption happens only on this device.</p>
               </div>
               <span className="secure-pill"><Check size={12} /> Unlocked</span>
@@ -486,14 +519,23 @@ function PopupApp() {
           {activeOrigin && (
             <div className="site-permission-card">
               <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-200">Autofill for this site</p>
+                <p className="text-xs font-medium text-slate-200">Current site</p>
                 <p className="mt-1 truncate text-[11px] text-slate-400">{new URL(activeOrigin).hostname}</p>
               </div>
               {siteEnabled ? (
                 <span className="secure-pill"><Check size={12} /> Enabled</span>
               ) : (
-                <button className="secondary-button shrink-0" type="button" onClick={() => void enableAutofill()}>Enable</button>
+                <button className="secondary-button shrink-0" type="button" disabled={busy} onClick={() => void enableAutofill()}>Enable autofill</button>
               )}
+              <button
+                type="button"
+                className="primary-button w-full"
+                disabled={busy}
+                onClick={() => void generateAndSaveForCurrentSite()}
+              >
+                <Sparkles size={14} /> {busy ? "Generating and saving…" : "Generate & save password"}
+              </button>
+              <p className="w-full text-[10px] leading-4 text-slate-500">Creates a new encrypted credential for this site; it does not replace existing entries or fill the website form.</p>
             </div>
           )}
 

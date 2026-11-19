@@ -17,6 +17,7 @@ import {
   IdCard,
   NotebookPen,
   BadgeCheck,
+  Activity,
   Home,
   LockKeyhole,
   Mail,
@@ -55,6 +56,7 @@ const navItems = [
 
 const adminNavItems = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
+  { name: "Analytics", href: "/admin/analytics", icon: Activity },
   { name: "User Management", href: "/admin/users", icon: Users },
   { name: "Email Notifications", href: "/admin/notifications", icon: Mail },
 ];

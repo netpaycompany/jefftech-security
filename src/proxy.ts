@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 
-const publicPaths = new Set(["/", "/login", "/signup", "/reset-password", "/auth/callback", "/auth/google-complete", "/admin/login"]);
+const publicPaths = new Set(["/", "/login", "/signup", "/reset-password", "/auth/callback", "/auth/google-complete", "/admin/login", "/api/analytics/visit"]);
 
 function addSecurityHeaders(response: NextResponse, contentSecurityPolicy: string) {
   response.headers.set("Content-Security-Policy", contentSecurityPolicy);

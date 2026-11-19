@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import { Analytics } from "@vercel/analytics/next";
 import { VaultProvider } from "@/components/vault/vault-provider";
+import { WebsiteAnalytics } from "@/components/analytics/website-analytics";
 import "./globals.css";
 
 export const instant = false;
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full bg-slate-950 text-slate-100">
         <VaultProvider>{children}</VaultProvider>
+        <WebsiteAnalytics />
         <Analytics />
       </body>
     </html>
